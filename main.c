@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <ncurses.h>
 
@@ -8,9 +9,9 @@
 // --- SETTINGS ---
 
 // General timing/speed settings
-const int FRAME_TIME = 25;  // milliseconds interval between frames
+const int FRAME_TIME = 25;      // milliseconds interval between frames
 const int INITIAL_TIME = 20;
-const int QUIT_TIME = 3;    // seconds to wait after hitting KEY_QUIT
+const int QUIT_TIME = 3;        // seconds to wait after hitting KEY_QUIT
 const int FROG_MOVE_FACTOR = 5;
 const int CAR_MOVE_FACTOR = 2;
 
@@ -19,19 +20,21 @@ const int KEY_QUIT = 'q';
 const int NOKEY = ' ';
 
 // Colors
-const int COLOR_MAIN = 1;
-const int COLOR_STATUS = 2;
-const int COLOR_PLAYABLE = 3;
-const int COLOR_FROG = 4;
-const int COLOR_FROG_R = 5;
-const int COLOR_CAR = 6;
-const int COLOR_CAR_R = 7;
+typedef enum {
+    COLOR_MAIN,
+    COLOR_STATUS,
+    COLOR_PLAYABLE,
+    COLOR_FROG,
+    COLOR_FROG_REVERSE,
+    COLOR_CAR,
+    COLOR_CAR_REVERSE
+} Color;
 
 // Playable area settings
 const int PLAYABLE_ROWS = 30;
 const int STATUS_ROWS = 3;
 const int PLAYABLE_COLS = 120;  // the same for status window
-const int OFFY = 0; // optional: window offset within the terminal
+const int OFFY = 0;             // optional: window offset within the terminal
 const int OFFX = 0;
 
 // Delay constants for real-time
@@ -43,16 +46,16 @@ const int DELAY_OFF = 0;
 // Window structure
 typedef struct {
     WINDOW* window; // ncurses window
+    Color color;
     int x, y;
     int rows, cols;
-    int color;
 } WIN;
 
 // Game object structure - used for frog directly, extended by CAR
 typedef struct {
     WIN* win;
-    int color;
-    int reverseColor;
+    Color color;
+    Color reverseColor;
     int bgFlag;
     int moveFactor;
     int x, y;
@@ -70,9 +73,9 @@ typedef enum {
 
 // Car structure
 typedef struct {
-    OBJ* obj;           // extends game object
+    OBJ* obj;           // extends OBJ
     int direction;      // 0 for left, 1 for right
-    int dynamicSpeed;   // 1 or 0
+    int dynamicSpeed;
     int disappearing;
     CarType type;
 } CAR;
@@ -85,11 +88,12 @@ typedef struct {
 } TIMER;
 
 
-// --- RANDOM NUMBER ---
-int randInt(int min, int max)
+// --- RANDOM NUMBER (inclusive) ---
+int RandInt(int min, int max)
 {
-    return (min + rand() % (max - min + 1));
+    return min + rand() % (max - min + 1);
 }
+
 
 // --- WINDOW FUNCTIONS ---
 
@@ -103,16 +107,16 @@ WINDOW* InitGame()
         exit(EXIT_FAILURE);
     }
 
-    start_color(); // initialize colors
+    start_color();  // initialize colors
     init_pair(COLOR_MAIN, COLOR_WHITE, COLOR_BLACK);
     init_pair(COLOR_PLAYABLE, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_STATUS, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_FROG, COLOR_GREEN, COLOR_WHITE);
-    init_pair(COLOR_FROG_R, COLOR_GREEN, COLOR_BLACK);
+    init_pair(COLOR_FROG_REVERSE, COLOR_GREEN, COLOR_BLACK);
     init_pair(COLOR_CAR, COLOR_RED, COLOR_WHITE);
-    init_pair(COLOR_CAR_R, COLOR_RED, COLOR_BLACK);
+    init_pair(COLOR_CAR_REVERSE, COLOR_RED, COLOR_BLACK);
 
-    noecho(); // turn off displaying input and hide cursor
+    noecho();       // turn off displaying input and hide cursor
     curs_set(0);
     return win;
 }
@@ -132,7 +136,7 @@ void Welcome(WINDOW* win)
 // Cleaning the window (prints " ")
 void CleanWin(WIN* win)
 {
-    wattron(win->window, COLOR_PAIR(win->color));   // apply colors
+    wattron(win->window, COLOR_PAIR(win->color));
     for (int row = 0; row < win->rows; row++)
     {
         for (int col = 0; col < win->cols; col++)
@@ -144,7 +148,7 @@ void CleanWin(WIN* win)
 }
 
 // Window initializer
-WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, int color, int delay)
+WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, Color color, int delay)
 {
     WIN* win = (WIN*)malloc(sizeof(WIN));
     win->x = x;
@@ -156,7 +160,7 @@ WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, int color, in
     CleanWin(win);
     if (delay == DELAY_OFF)
     {
-        nodelay(win->window, TRUE); // non-blocking input for real-time
+        nodelay(win->window, TRUE);                     // non-blocking input for real-time
     }
     wrefresh(win->window);
     return win;
@@ -200,7 +204,8 @@ void InitStatus(WIN* win, TIMER* timer, OBJ* frog)
     mvwprintw(win->window, 1, 78, "Kacper Neumann, 203394");
 }
 
-// --- GAMEOBJECT FUNCTIONS ---
+
+// --- OBJ FUNCTIONS ---
 
 // Print game object's shape
 void PrintObject(OBJ* obj)
@@ -275,7 +280,7 @@ void ReverseObjectColors(OBJ* obj)
 }
 
 // Frog initializer
-OBJ* InitFrog(WIN* win, int color, int reverseColor)
+OBJ* InitFrog(WIN* win, Color color, Color reverseColor)
 {
     OBJ* frog = (OBJ*)malloc(sizeof(OBJ));
     frog->win = win;
@@ -304,8 +309,8 @@ OBJ* InitFrog(WIN* win, int color, int reverseColor)
     return frog;
 }
 
-// // Car initializer
-CAR* InitCar(WIN* win, int color, int reverseColor, int y, int dynamicSpeed, int disappearing, CarType type)
+// Car initializer
+CAR* InitCar(WIN* win, Color color, Color reverseColor, int y, int dynamicSpeed, int disappearing, CarType type)
 {
     OBJ* obj = (OBJ*)malloc(sizeof(OBJ));
     obj->win = win;
@@ -328,16 +333,16 @@ CAR* InitCar(WIN* win, int color, int reverseColor, int y, int dynamicSpeed, int
 
     obj->xmin = 1;
     obj->xmax = win->cols - 1;
-    obj->ymin = obj->y; // the car does not move vertically
+    obj->ymin = obj->y; // cars don't move vertically
     obj->ymax = obj->y;
 
     CAR* car = (CAR*)malloc(sizeof(CAR));
     car->obj = obj;
-    car->direction = randInt(0, 1);
+    car->direction = RandInt(0, 1);
     car->dynamicSpeed = dynamicSpeed;
     car->disappearing = disappearing;
     car->type = type;
-    SetObjectPosition(obj, car->direction == 0 ? win->cols - obj->width : 1, y); // based on initial direction
+    SetObjectPosition(obj, car->direction == 0 ? obj->xmax - obj->width : obj->xmin, y); // depends on initial direction
     return car;
 }
 
@@ -375,17 +380,15 @@ void ReverseCarDirection(CAR* car)
     {
         car->direction = 1;
     }
-
 }
 
 // Car movement
 void MoveCar(CAR* car, unsigned int frame)
 {
     ReverseCarDirection(car);
-
     if (frame % car->obj->moveFactor == 0)
     {
-        MoveObject(car->obj, car->direction == 0 ? -1 : 1, 0); // based on direction
+        MoveObject(car->obj, car->direction == 0 ? -1 : 1, 0); // depends on direction
     }
 }
 
@@ -444,7 +447,6 @@ int MainLoop(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer)
         {
             MoveFrog(frog, key, timer->frameNo);
         }
-
         MoveCar(car, timer->frameNo);
 
         PrintPosition(statusWin, frog);
@@ -457,9 +459,12 @@ int MainLoop(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer)
     return 0;
 }
 
+
 // --- MAIN PROGRAM ---
 int main()
 {
+    srand(time(NULL));
+
     WINDOW* mainWindow = InitGame();
     Welcome(mainWindow);
 
@@ -468,8 +473,8 @@ int main()
 
     TIMER* timer = InitTimer();
 
-    OBJ* frog = InitFrog(playableWin, COLOR_FROG, COLOR_FROG_R);
-    CAR* car = InitCar(playableWin, COLOR_CAR, COLOR_CAR_R, 1, 0, 0, Enemy);
+    OBJ* frog = InitFrog(playableWin, COLOR_FROG, COLOR_FROG_REVERSE);
+    CAR* car = InitCar(playableWin, COLOR_CAR, COLOR_CAR_REVERSE, 20, 0, 0, Enemy);
 
     InitStatus(statusWin, timer, frog);
     MoveObject(frog, 0, 0);
