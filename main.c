@@ -23,9 +23,7 @@ typedef enum {
     COLOR_STATUS,
     COLOR_PLAYABLE,
     COLOR_FROG,
-    COLOR_FROG_REVERSE,
     COLOR_CAR,
-    COLOR_CAR_REVERSE
 } Color;
 
 // Area settings
@@ -61,8 +59,6 @@ typedef struct {
 typedef struct {
     WIN* win;
     Color color;
-    Color reverseColor;
-    int bgFlag;
     int moveFactor;
     int x, y;           // top-left corner coordinates
     int xmin, xmax;     // movement boundaries
@@ -117,9 +113,7 @@ WINDOW* InitGame()
     init_pair(COLOR_PLAYABLE, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_STATUS, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_FROG, COLOR_GREEN, COLOR_WHITE);
-    init_pair(COLOR_FROG_REVERSE, COLOR_GREEN, COLOR_BLACK);
     init_pair(COLOR_CAR, COLOR_RED, COLOR_WHITE);
-    init_pair(COLOR_CAR_REVERSE, COLOR_RED, COLOR_BLACK);
 
     noecho();       // turn off displaying input and hide cursor
     curs_set(0);
@@ -234,17 +228,10 @@ void PrintObject(OBJ* obj)
 // Move the game object along both axes by 1
 void MoveObject(OBJ* obj, int dx, int dy)
 {
+    wattron(obj->win->window, COLOR_PAIR(obj->color));
+
     char* emptyRow = (char*)malloc(obj->width * sizeof(char));    // string of empty spaces to erase the old position row
     memset(emptyRow, ' ', obj->width);
-
-    if (obj->bgFlag)
-    {
-        wattron(obj->win->window, COLOR_PAIR(obj->color));
-    }
-    else
-    {
-        wattron(obj->win->window, COLOR_PAIR(obj->reverseColor));
-    }
 
     if ((dy == 1) && (obj->y + obj->height < obj->ymax))
     {
@@ -276,10 +263,7 @@ void MoveObject(OBJ* obj, int dx, int dy)
 
     PrintObject(obj);
 
-    if (obj->bgFlag)
-    {
-        wattron(obj->win->window, COLOR_PAIR(obj->win->color));
-    }
+    wattron(obj->win->window, COLOR_PAIR(obj->win->color));
     wrefresh(obj->win->window);
 }
 
@@ -289,19 +273,12 @@ void SetObjectPosition(OBJ* obj, int x, int y)
     obj->y = y;
 }
 
-void ReverseObjectColors(OBJ* obj)
-{
-    obj->bgFlag = !obj->bgFlag;
-}
-
 // Frog initializer
-OBJ* InitFrog(WIN* win, Color color, Color reverseColor)
+OBJ* InitFrog(WIN* win, Color color)
 {
     OBJ* frog = (OBJ*)malloc(sizeof(OBJ));
     frog->win = win;
     frog->color = color;
-    frog->reverseColor = reverseColor;
-    frog->bgFlag = 1;
     frog->width = 6;    // TODO: move to constants
     frog->height = 3;
     frog->moveFactor = 0;
@@ -325,13 +302,11 @@ OBJ* InitFrog(WIN* win, Color color, Color reverseColor)
 }
 
 // Car initializer
-CAR* InitCar(WIN* win, Color color, Color reverseColor, int y, int dynamicSpeed, int disappearing, CarType type)
+CAR* InitCar(WIN* win, Color color, int y, int dynamicSpeed, int disappearing, CarType type)
 {
     OBJ* obj = (OBJ*)malloc(sizeof(OBJ));
     obj->win = win;
     obj->color = color;
-    obj->reverseColor = reverseColor;
-    obj->bgFlag = 1;
     obj->width = 8; // TODO: move to constants
     obj->height = 3;
     obj->moveFactor = CAR_MOVE_FACTOR;  // TODO: implement random speed
@@ -407,7 +382,7 @@ void MoveCar(CAR* car, unsigned int frame)
     }
 }
 
-int DetectCollision(OBJ* obj, OBJ* other)
+int Collision(OBJ* obj, OBJ* other)
 {
     return ((
         (obj->y >= other->y && obj->y < other->y + other->height) ||
@@ -461,7 +436,7 @@ GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer)
         MoveCar(car, timer->frameNo);   // TODO: move all cars
 
         // TODO: return SUCCESS when reaching the destination
-        if (DetectCollision(frog, car->obj))
+        if (Collision(frog, car->obj))
         {
             return FAILURE;
         }
@@ -488,19 +463,19 @@ int main()
 
     TIMER* timer = InitTimer();
 
-    OBJ* frog = InitFrog(playableWin, COLOR_FROG, COLOR_FROG_REVERSE);
-    CAR* car = InitCar(playableWin, COLOR_CAR, COLOR_CAR_REVERSE, 20, 0, 0, Enemy); // TODO: create a car on each lane
+    OBJ* frog = InitFrog(playableWin, COLOR_FROG);
+    CAR* car = InitCar(playableWin, COLOR_CAR, 20, 0, 0, Enemy); // TODO: create a car on each lane
 
     InitStatus(statusWin, timer, frog);
-    MoveObject(frog, 0, 0);     // force first render
+    MoveObject(frog, 0, 0);         // force first render
 
     GameResult result = Play(statusWin, frog, car, timer);
     EndGame(statusWin, result);
 
-    delwin(playableWin->window);    // clean up
+    delwin(playableWin->window);    // clean-up
     delwin(statusWin->window);
     delwin(mainWindow);
     endwin();
-    refresh();
+    refresh();      // TODO: free memory - Cleanup()
     return EXIT_SUCCESS;
 }
