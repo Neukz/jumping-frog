@@ -7,7 +7,6 @@
 
 
 // --- SETTINGS ---
-
 // General timing/speed settings
 const int FRAME_TIME = 25;      // milliseconds interval between frames
 const int INITIAL_TIME = 20;
@@ -17,7 +16,6 @@ const int CAR_MOVE_FACTOR = 2;
 
 // Controls
 const int KEY_QUIT = 'q';
-const int NOKEY = ' ';
 
 // Colors
 typedef enum {
@@ -30,24 +28,32 @@ typedef enum {
     COLOR_CAR_REVERSE
 } Color;
 
-// Playable area settings
+// Area settings
 const int PLAYABLE_ROWS = 30;
-const int STATUS_ROWS = 3;
 const int PLAYABLE_COLS = 120;  // the same for status window
-const int OFFY = 0;             // optional: window offset within the terminal
+const int STATUS_ROWS = 3;
+const int OFFY = 0;             // optional: window offset within the main window
 const int OFFX = 0;
+
+// MainLoop constants indicating the reason to end the game
+typedef enum {
+    SUCCESS,        // reached destination
+    FAILURE,        // died
+    TIME_OVER,      // time is over
+    INTERRUPTED     // decision to quit
+} GameResult;
 
 // Delay constants for real-time
 const int DELAY_ON = 1;
 const int DELAY_OFF = 0;
 
-// --- DATA STRUCTURES ---
 
+// --- DATA STRUCTURES ---
 // Window structure
 typedef struct {
-    WINDOW* window; // ncurses window
+    WINDOW* window; // extends ncurses window
     Color color;
-    int x, y;
+    int x, y;       // top-left corner coordinates
     int rows, cols;
 } WIN;
 
@@ -58,25 +64,25 @@ typedef struct {
     Color reverseColor;
     int bgFlag;
     int moveFactor;
-    int x, y;
-    int xmin, xmax;
+    int x, y;           // top-left corner coordinates
+    int xmin, xmax;     // movement boundaries
     int ymin, ymax;
     int width, height;
     char** shape;
 } OBJ;
 
 typedef enum {
-    Enemy,
-    Neutral,
-    Friendly
+    Enemy,      // normal car
+    Neutral,    // stops when the frog is close
+    Friendly    // helps the frog on demand
 } CarType;
 
 // Car structure
 typedef struct {
     OBJ* obj;           // extends OBJ
     int direction;      // 0 for left, 1 for right
-    int dynamicSpeed;
-    int disappearing;
+    int dynamicSpeed;   // 0 for constant speed, 1 for dynamic
+    int disappearing;   // 0 for perpetually bouncing car, 1 for disappearing (replaced with a new car)
     CarType type;
 } CAR;
 
@@ -96,8 +102,7 @@ int RandInt(int min, int max)
 
 
 // --- WINDOW FUNCTIONS ---
-
-// Game initializer
+// Main window initializer
 WINDOW* InitGame()
 {
     WINDOW* win;
@@ -121,18 +126,17 @@ WINDOW* InitGame()
     return win;
 }
 
-// Welcome screen
+// Welcome screen - wait for user input before starting the game
 void Welcome(WINDOW* win)
 {
     mvwaddstr(win, 1, 1, "Press any key to start the game.");
-    wgetch(win);    // wait for input and clear
+    wgetch(win);
     wclear(win);
     wrefresh(win);
 }
 
 
 // --- WIN FUNCTIONS ---
-
 // Cleaning the window (prints " ")
 void CleanWin(WIN* win)
 {
@@ -166,21 +170,8 @@ WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, Color color, 
     return win;
 }
 
-// Handle quitting the game
-void EndGame(WIN* win, const char* message)
-{
-    CleanWin(win);
-    for (int seconds = QUIT_TIME; seconds > 0; seconds--)
-    {
-        mvwprintw(win->window, 1, 2, "%s Closing the game in %d seconds...", message, seconds);
-        wrefresh(win->window);
-        sleep(1);
-    }
-}
-
 
 // --- STATUS FUNCTIONS ---
-
 void PrintPosition(WIN* win, OBJ* frog)
 {
     mvwprintw(win->window, 1, 45, "x: %d y: %d", frog->x, frog->y);
@@ -193,7 +184,7 @@ void PrintTime(WIN* win, float timeLeft)
     wrefresh(win->window);
 }
 
-// Status initializer
+// Status window initializer
 void InitStatus(WIN* win, TIMER* timer, OBJ* frog)
 {
     box(win->window, 0, 0);
@@ -204,9 +195,33 @@ void InitStatus(WIN* win, TIMER* timer, OBJ* frog)
     mvwprintw(win->window, 1, 78, "Kacper Neumann, 203394");
 }
 
+// Display information about the result of the game and count down to quit
+void EndGame(WIN* win, GameResult result)
+{
+    CleanWin(win);
+    char message[100];
+    switch (result)
+    {
+        // TODO: case SUCCESS:
+        case FAILURE:
+            sprintf(message, "You died.");
+            break;
+        case TIME_OVER:
+            sprintf(message, "Time is over.");
+            break;
+        case INTERRUPTED:
+            sprintf(message, "You have decided to quit the game.");
+    }
+    for (int seconds = QUIT_TIME; seconds > 0; seconds--)
+    {
+        mvwprintw(win->window, 1, 2, "%s Closing the game in %d seconds...", message, seconds);
+        wrefresh(win->window);
+        sleep(1);
+    }
+}
+
 
 // --- OBJ FUNCTIONS ---
-
 // Print game object's shape
 void PrintObject(OBJ* obj)
 {
@@ -287,7 +302,7 @@ OBJ* InitFrog(WIN* win, Color color, Color reverseColor)
     frog->color = color;
     frog->reverseColor = reverseColor;
     frog->bgFlag = 1;
-    frog->width = 6;
+    frog->width = 6;    // TODO: move to constants
     frog->height = 3;
     frog->moveFactor = 0;
     frog->shape = (char**)malloc(frog->height * sizeof(char*));
@@ -317,9 +332,9 @@ CAR* InitCar(WIN* win, Color color, Color reverseColor, int y, int dynamicSpeed,
     obj->color = color;
     obj->reverseColor = reverseColor;
     obj->bgFlag = 1;
-    obj->width = 8;
+    obj->width = 8; // TODO: move to constants
     obj->height = 3;
-    obj->moveFactor = CAR_MOVE_FACTOR; // random speed
+    obj->moveFactor = CAR_MOVE_FACTOR;  // TODO: implement random speed
 
     obj->shape = (char**)malloc(obj->height * sizeof(char*));
     for (int i = 0; i < obj->height; i++)
@@ -338,7 +353,7 @@ CAR* InitCar(WIN* win, Color color, Color reverseColor, int y, int dynamicSpeed,
 
     CAR* car = (CAR*)malloc(sizeof(CAR));
     car->obj = obj;
-    car->direction = RandInt(0, 1);
+    car->direction = RandInt(0, 1);     // initial direction is random
     car->dynamicSpeed = dynamicSpeed;
     car->disappearing = disappearing;
     car->type = type;
@@ -349,27 +364,27 @@ CAR* InitCar(WIN* win, Color color, Color reverseColor, int y, int dynamicSpeed,
 // Frog movement
 void MoveFrog(OBJ* frog, char key, unsigned int frame)
 {
-    if (frame - frog->moveFactor >= FROG_MOVE_FACTOR)
+    if (frame - frog->moveFactor >= FROG_MOVE_FACTOR)   // movement cooldown condition
     {
         switch (key)
         {
-        case 'w':
-            MoveObject(frog, 0, -1);
-            break;
-        case 's':
-            MoveObject(frog, 0, 1);
-            break;
-        case 'a':
-            MoveObject(frog, -1, 0);
-            break;
-        case 'd':
-            MoveObject(frog, 1, 0);
+            case 'w':
+                MoveObject(frog, 0, -1);
+                break;
+            case 's':
+                MoveObject(frog, 0, 1);
+                break;
+            case 'a':
+                MoveObject(frog, -1, 0);
+                break;
+            case 'd':
+                MoveObject(frog, 1, 0);
         }
         frog->moveFactor = frame;
     }
 }
 
-// Reverse direction when car hits the wall
+// Reverse direction when car hits the wall (bouncing)
 void ReverseCarDirection(CAR* car)
 {
     if (car->direction == 1 && car->obj->x == car->obj->xmax - car->obj->width)
@@ -388,7 +403,7 @@ void MoveCar(CAR* car, unsigned int frame)
     ReverseCarDirection(car);
     if (frame % car->obj->moveFactor == 0)
     {
-        MoveObject(car->obj, car->direction == 0 ? -1 : 1, 0); // depends on direction
+        MoveObject(car->obj, car->direction == 0 ? -1 : 1, 0);  // depends on direction
     }
 }
 
@@ -405,7 +420,6 @@ int DetectCollision(OBJ* obj, OBJ* other)
 
 
 // --- TIMER FUNCTIONS ---
-
 // TIMER initializer
 TIMER* InitTimer()
 {
@@ -429,34 +443,35 @@ int UpdateTimer(TIMER* timer, WIN* win)
         usleep(timer->frameTime * 1000);
     }
     PrintTime(win, timer->timeLeft);
-    return timer->timeLeft == 0 ? 1 : 0; // return 1 if time has elapsed or 0 otherwise    
+    return timer->timeLeft == 0 ? 1 : 0; // 1 if time has elapsed, 0 otherwise    
 }
 
 
 // --- MAIN LOOP ---
-int MainLoop(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer)
+GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer)
 {
     int key;
     while ((key = wgetch(statusWin->window)) != KEY_QUIT)
     {
-        if (key == ERR)
-        {
-            key = NOKEY;
-        }
-        else
+        flushinp(); // clear input buffer
+        if (key != ERR)
         {
             MoveFrog(frog, key, timer->frameNo);
         }
-        MoveCar(car, timer->frameNo);
+        MoveCar(car, timer->frameNo);   // TODO: move all cars
 
-        PrintPosition(statusWin, frog);
-        flushinp(); // clear input buffer
+        // TODO: return SUCCESS when reaching the destination
+        if (DetectCollision(frog, car->obj))
+        {
+            return FAILURE;
+        }
         if (UpdateTimer(timer, statusWin))
         {
-            return 1; // return points or sth
+            return TIME_OVER;
         }
+        PrintPosition(statusWin, frog);
     }
-    return 0;
+    return INTERRUPTED;
 }
 
 
@@ -474,23 +489,13 @@ int main()
     TIMER* timer = InitTimer();
 
     OBJ* frog = InitFrog(playableWin, COLOR_FROG, COLOR_FROG_REVERSE);
-    CAR* car = InitCar(playableWin, COLOR_CAR, COLOR_CAR_REVERSE, 20, 0, 0, Enemy);
+    CAR* car = InitCar(playableWin, COLOR_CAR, COLOR_CAR_REVERSE, 20, 0, 0, Enemy); // TODO: create a car on each lane
 
     InitStatus(statusWin, timer, frog);
-    MoveObject(frog, 0, 0);
-    MoveObject(car->obj, 0, 0);
+    MoveObject(frog, 0, 0);     // force first render
 
-    int result;
-    if ((result = MainLoop(statusWin, frog, car, timer)) == 0)
-    {
-        EndGame(statusWin, "You have decided to quit the game.");
-    }
-    else
-    {
-        char message[100];
-        sprintf(message, "Timer is over. Points: %d", result);
-        EndGame(statusWin, message);
-    }
+    GameResult result = Play(statusWin, frog, car, timer);
+    EndGame(statusWin, result);
 
     delwin(playableWin->window);    // clean up
     delwin(statusWin->window);
