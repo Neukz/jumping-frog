@@ -442,7 +442,6 @@ int MainLoop(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer)
         }
         else
         {
-            CleanWin(frog->win);
             MoveFrog(frog, key, timer->frameNo);
         }
 
