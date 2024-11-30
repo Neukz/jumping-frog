@@ -25,6 +25,7 @@ const int FROG_HEIGHT = 3;
 const int FROG_MOVE_FACTOR = 5;
 
 // Car
+const int N_CARS = 5;
 const int CAR_WIDTH = 8;
 const int CAR_HEIGHT = 3;
 const int CAR_MOVE_FACTOR = 2;
@@ -43,8 +44,8 @@ typedef enum {
 } Color;
 
 // Area settings
-const int PLAYABLE_ROWS = 30;
-const int PLAYABLE_COLS = 120;  // the same for status window
+const int PLAYABLE_ROWS = 45;
+const int PLAYABLE_COLS = 80;  // the same for status window
 const int STATUS_ROWS = 3;
 const int OFFY = 0;             // optional: window offset within the main window
 const int OFFX = 0;
@@ -191,15 +192,15 @@ WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, Color color, 
 
 
 // --- STATUS FUNCTIONS ---
-void PrintPosition(WIN* win, OBJ* frog)
+void PrintTime(WIN* win, float timeLeft)
 {
-    mvwprintw(win->window, 1, 45, "x: %d y: %d", frog->x, frog->y);
+    mvwprintw(win->window, 1, 3, "Time: %.2f", timeLeft);
     wrefresh(win->window);
 }
 
-void PrintTime(WIN* win, float timeLeft)
+void PrintPosition(WIN* win, OBJ* frog)
 {
-    mvwprintw(win->window, 1, 9, "%.2f", timeLeft);
+    mvwprintw(win->window, 1, 25, "Position: x: %d y: %d", frog->x, frog->y);
     wrefresh(win->window);
 }
 
@@ -207,11 +208,9 @@ void PrintTime(WIN* win, float timeLeft)
 void InitStatus(WIN* win, TIMER* timer, OBJ* frog)
 {
     box(win->window, 0, 0);
-    mvwprintw(win->window, 1, 3, "Time: ");
     PrintTime(win, timer->timeLeft);
-    mvwprintw(win->window, 1, 35, "Position: ");
     PrintPosition(win, frog);
-    mvwprintw(win->window, 1, 78, "Kacper Neumann, 203394");
+    mvwprintw(win->window, 1, 55, "Kacper Neumann, 203394");
 }
 
 // Display information about the result of the game and count down to quit
@@ -399,6 +398,17 @@ CAR* InitCar(WIN* win, Color color, int width, int height, int moveFactor, int y
     return car;
 }
 
+CAR** GenerateCars(WIN* win, int nCars, Color color, int width, int height, int moveFactor, int frogHeight)
+{
+    CAR** cars = (CAR**)malloc(nCars * sizeof(CAR*));
+    for (int i = 0; i < nCars; i++)
+    {
+        // initialize cars with a frogHeight-rows gap between them (+2 for lanes above and below)
+        cars[i] = InitCar(win, color, width, height, moveFactor, i * (height + frogHeight + 2) + frogHeight + 2, 0, 0, Enemy);
+    }
+    return cars;
+}
+
 // Reverse direction when car hits the wall (bouncing)
 void ReverseCarDirection(CAR* car)
 {
@@ -489,7 +499,7 @@ int UpdateTimer(TIMER* timer, WIN* win, int initialTime)
 
 
 // --- MAIN LOOP ---
-GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, DEST* dest, TIMER* timer, int quit, int initialTime)
+GameResult Play(WIN* statusWin, OBJ* frog, CAR** cars, int nCars, DEST* dest, TIMER* timer, int quit, int initialTime)
 {
     int key;
     while ((key = wgetch(statusWin->window)) != quit)
@@ -499,7 +509,10 @@ GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, DEST* dest, TIMER* timer, i
         {
             MoveFrog(frog, key, timer->frameNo);
         }
-        MoveCar(car, timer->frameNo);   // TODO: move all cars
+        for (int i = 0; i < nCars; i++)
+        {
+            MoveCar(cars[i], timer->frameNo);
+        }
         PrintDest(dest);
         PrintObject(frog);  // force overlapping car lanes
         PrintPosition(statusWin, frog);
@@ -507,9 +520,12 @@ GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, DEST* dest, TIMER* timer, i
         {
             return SUCCESS;
         }
-        if (Collision(frog, car->obj))
+        for (int i = 0; i < nCars; i++)
         {
-            return FAILURE;
+            if (Collision(frog, cars[i]->obj))
+            {
+                return FAILURE;
+            }
         }
         if (UpdateTimer(timer, statusWin, initialTime))
         {
@@ -534,13 +550,16 @@ int main()
     TIMER* timer = InitTimer(FRAME_TIME, INITIAL_TIME);
 
     OBJ* frog = InitFrog(playableWin, COLOR_FROG, FROG_WIDTH, FROG_HEIGHT);
-    CAR* car = InitCar(playableWin, COLOR_CAR, CAR_WIDTH, CAR_HEIGHT, CAR_MOVE_FACTOR, 20, 0, 0, Enemy); // TODO: create a car on each lane
+    CAR** cars = GenerateCars(playableWin, N_CARS, COLOR_CAR, CAR_WIDTH, CAR_HEIGHT, CAR_MOVE_FACTOR, FROG_HEIGHT);
     DEST* destination = InitDest(playableWin, COLOR_DEST, FROG_WIDTH, 1);
 
-    MoveObject(car->obj, 0, 0);     // force first render
+    for (int i = 0; i < N_CARS; i++)
+    {
+        MoveObject(cars[i]->obj, 0, 0); // force first render
+    }
     InitStatus(statusWin, timer, frog);
 
-    GameResult result = Play(statusWin, frog, car, destination, timer, KEY_QUIT, INITIAL_TIME);
+    GameResult result = Play(statusWin, frog, cars, N_CARS, destination, timer, KEY_QUIT, INITIAL_TIME);
     EndGame(statusWin, result, QUIT_TIME);
 
     delwin(playableWin->window);    // clean-up
