@@ -106,7 +106,7 @@ typedef struct {
     int width, height;
 } DEST;
 
-// TIMER structure
+// Timer structure
 typedef struct {
     unsigned int frameTime;
     float timeLeft;
@@ -252,6 +252,7 @@ void PrintObject(OBJ* obj)
         mvwprintw(obj->win->window, obj->y + i, obj->x, "%s", obj->shape[i]);
     }
     wattron(obj->win->window, COLOR_PAIR(obj->win->color));
+    wrefresh(obj->win->window);
 }
 
 // Move the game object along both axes by 1
@@ -291,7 +292,6 @@ void MoveObject(OBJ* obj, int dx, int dy)
     }
 
     PrintObject(obj);
-    wrefresh(obj->win->window);
 }
 
 int Collision(OBJ* obj, OBJ* other)
@@ -451,6 +451,7 @@ void PrintDest(DEST* dest)
         }
     }
     wattron(dest->win->window, COLOR_PAIR(dest->win->color));
+    wrefresh(dest->win->window);
 }
 
 // Returns 1 if the frog has reached the destination, 0 otherwise
@@ -536,8 +537,8 @@ int main()
     CAR* car = InitCar(playableWin, COLOR_CAR, CAR_WIDTH, CAR_HEIGHT, CAR_MOVE_FACTOR, 20, 0, 0, Enemy); // TODO: create a car on each lane
     DEST* destination = InitDest(playableWin, COLOR_DEST, FROG_WIDTH, 1);
 
+    MoveObject(car->obj, 0, 0);     // force first render
     InitStatus(statusWin, timer, frog);
-    MoveObject(frog, 0, 0);         // force first render
 
     GameResult result = Play(statusWin, frog, car, destination, timer, KEY_QUIT, INITIAL_TIME);
     EndGame(statusWin, result, QUIT_TIME);
