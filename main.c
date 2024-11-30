@@ -41,7 +41,7 @@ const int STATUS_ROWS = 3;
 const int OFFY = 0;             // optional: window offset within the main window
 const int OFFX = 0;
 
-// MainLoop constants indicating the reason to end the game
+// Main loop (Play function) constants indicating the reason to end the game
 typedef enum {
     SUCCESS,        // reached destination
     FAILURE,        // died
@@ -227,10 +227,12 @@ void EndGame(WIN* win, GameResult result, int quitTime)
 // Print game object's shape
 void PrintObject(OBJ* obj)
 {
+    wattron(obj->win->window, COLOR_PAIR(obj->color));
     for (int i = 0; i < obj->height; i++)
     {
         mvwprintw(obj->win->window, obj->y + i, obj->x, "%s", obj->shape[i]);
     }
+    wattron(obj->win->window, COLOR_PAIR(obj->win->color));
 }
 
 // Move the game object along both axes by 1
@@ -270,8 +272,6 @@ void MoveObject(OBJ* obj, int dx, int dy)
     }
 
     PrintObject(obj);
-
-    wattron(obj->win->window, COLOR_PAIR(obj->win->color));
     wrefresh(obj->win->window);
 }
 
@@ -388,6 +388,9 @@ void MoveCar(CAR* car, unsigned int frame)
     {
         MoveObject(car->obj, car->direction == 0 ? -1 : 1, 0);  // depends on direction
     }
+
+    mvwhline(car->obj->win->window, car->obj->y - 1, car->obj->win->x + 1, '-', car->obj->win->cols - 2);  // draw car lane
+    mvwhline(car->obj->win->window, car->obj->y + car->obj->height, car->obj->win->x + 1, '-', car->obj->win->cols - 2);
 }
 
 int Collision(OBJ* obj, OBJ* other)
@@ -452,6 +455,7 @@ GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer, int quit, int
         {
             return TIME_OVER;
         }
+        PrintObject(frog);  // force overlapping car lanes
         PrintPosition(statusWin, frog);
     }
     return INTERRUPTED;
