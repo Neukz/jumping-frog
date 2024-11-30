@@ -11,7 +11,15 @@
 const int FRAME_TIME = 25;      // milliseconds interval between frames
 const int INITIAL_TIME = 20;
 const int QUIT_TIME = 3;        // seconds to wait after hitting KEY_QUIT
+
+// Frog
+const int FROG_WIDTH = 6;
+const int FROG_HEIGHT = 3;
 const int FROG_MOVE_FACTOR = 5;
+
+// Car
+const int CAR_WIDTH = 8;
+const int CAR_HEIGHT = 3;
 const int CAR_MOVE_FACTOR = 2;
 
 // Controls
@@ -190,7 +198,7 @@ void InitStatus(WIN* win, TIMER* timer, OBJ* frog)
 }
 
 // Display information about the result of the game and count down to quit
-void EndGame(WIN* win, GameResult result)
+void EndGame(WIN* win, GameResult result, int quitTime)
 {
     CleanWin(win);
     char message[100];
@@ -206,7 +214,7 @@ void EndGame(WIN* win, GameResult result)
         case INTERRUPTED:
             sprintf(message, "You have decided to quit the game.");
     }
-    for (int seconds = QUIT_TIME; seconds > 0; seconds--)
+    for (int seconds = quitTime; seconds > 0; seconds--)
     {
         mvwprintw(win->window, 1, 2, "%s Closing the game in %d seconds...", message, seconds);
         wrefresh(win->window);
@@ -274,13 +282,13 @@ void SetObjectPosition(OBJ* obj, int x, int y)
 }
 
 // Frog initializer
-OBJ* InitFrog(WIN* win, Color color)
+OBJ* InitFrog(WIN* win, Color color, int width, int height)
 {
     OBJ* frog = (OBJ*)malloc(sizeof(OBJ));
     frog->win = win;
     frog->color = color;
-    frog->width = 6;    // TODO: move to constants
-    frog->height = 3;
+    frog->width = width;
+    frog->height = height;
     frog->moveFactor = 0;
     frog->shape = (char**)malloc(frog->height * sizeof(char*));
     for (int i = 0; i < frog->height; i++)
@@ -302,14 +310,14 @@ OBJ* InitFrog(WIN* win, Color color)
 }
 
 // Car initializer
-CAR* InitCar(WIN* win, Color color, int y, int dynamicSpeed, int disappearing, CarType type)
+CAR* InitCar(WIN* win, Color color, int width, int height, int moveFactor, int y, int dynamicSpeed, int disappearing, CarType type)
 {
     OBJ* obj = (OBJ*)malloc(sizeof(OBJ));
     obj->win = win;
     obj->color = color;
-    obj->width = 8; // TODO: move to constants
-    obj->height = 3;
-    obj->moveFactor = CAR_MOVE_FACTOR;  // TODO: implement random speed
+    obj->width = width;
+    obj->height = height;
+    obj->moveFactor = moveFactor;
 
     obj->shape = (char**)malloc(obj->height * sizeof(char*));
     for (int i = 0; i < obj->height; i++)
@@ -339,7 +347,7 @@ CAR* InitCar(WIN* win, Color color, int y, int dynamicSpeed, int disappearing, C
 // Frog movement
 void MoveFrog(OBJ* frog, char key, unsigned int frame)
 {
-    if (frame - frog->moveFactor >= FROG_MOVE_FACTOR)   // movement cooldown condition
+    if (frame - frog->moveFactor >= FROG_MOVE_FACTOR)   // movement cooldown condition // TODO: move elsewhere once settings structure is implemented
     {
         switch (key)
         {
@@ -396,19 +404,19 @@ int Collision(OBJ* obj, OBJ* other)
 
 // --- TIMER FUNCTIONS ---
 // TIMER initializer
-TIMER* InitTimer()
+TIMER* InitTimer(unsigned int frameTime, int initialTime)
 {
     TIMER* timer = (TIMER*)malloc(sizeof(TIMER));
     timer->frameNo = 1;
-    timer->frameTime = FRAME_TIME;
-    timer->timeLeft = INITIAL_TIME / 1.0;
+    timer->frameTime = frameTime;
+    timer->timeLeft = initialTime / 1.0;
     return timer;
 }
 
-int UpdateTimer(TIMER* timer, WIN* win)
+int UpdateTimer(TIMER* timer, WIN* win, int initialTime)
 {
     timer->frameNo++;
-    timer->timeLeft = INITIAL_TIME - (timer->frameNo * timer->frameTime / 1000.0);
+    timer->timeLeft = initialTime - (timer->frameNo * timer->frameTime / 1000.0);
     if (timer->timeLeft < timer->frameTime / 1000.0)
     {
         timer->timeLeft = 0;
@@ -423,10 +431,10 @@ int UpdateTimer(TIMER* timer, WIN* win)
 
 
 // --- MAIN LOOP ---
-GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer)
+GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer, int quit, int initialTime)
 {
     int key;
-    while ((key = wgetch(statusWin->window)) != KEY_QUIT)
+    while ((key = wgetch(statusWin->window)) != quit)
     {
         flushinp(); // clear input buffer
         if (key != ERR)
@@ -440,7 +448,7 @@ GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer)
         {
             return FAILURE;
         }
-        if (UpdateTimer(timer, statusWin))
+        if (UpdateTimer(timer, statusWin, initialTime))
         {
             return TIME_OVER;
         }
@@ -461,16 +469,16 @@ int main()
     WIN* playableWin = InitWin(mainWindow, PLAYABLE_ROWS, PLAYABLE_COLS, OFFY, OFFX, COLOR_PLAYABLE, DELAY_ON);
     WIN* statusWin = InitWin(mainWindow, STATUS_ROWS, PLAYABLE_COLS, PLAYABLE_ROWS + OFFY, OFFX, COLOR_STATUS, DELAY_OFF);
 
-    TIMER* timer = InitTimer();
+    TIMER* timer = InitTimer(FRAME_TIME, INITIAL_TIME);
 
-    OBJ* frog = InitFrog(playableWin, COLOR_FROG);
-    CAR* car = InitCar(playableWin, COLOR_CAR, 20, 0, 0, Enemy); // TODO: create a car on each lane
+    OBJ* frog = InitFrog(playableWin, COLOR_FROG, FROG_WIDTH, FROG_HEIGHT);
+    CAR* car = InitCar(playableWin, COLOR_CAR, CAR_WIDTH, CAR_HEIGHT, CAR_MOVE_FACTOR, 20, 0, 0, Enemy); // TODO: create a car on each lane
 
     InitStatus(statusWin, timer, frog);
     MoveObject(frog, 0, 0);         // force first render
 
-    GameResult result = Play(statusWin, frog, car, timer);
-    EndGame(statusWin, result);
+    GameResult result = Play(statusWin, frog, car, timer, KEY_QUIT, INITIAL_TIME);
+    EndGame(statusWin, result, QUIT_TIME);
 
     delwin(playableWin->window);    // clean-up
     delwin(statusWin->window);
