@@ -1,3 +1,10 @@
+/*
+    Jumping Frog
+    Kacper Neumann, 203394
+
+    This game has been developed based on the demo game provided by Prof. Michał Małafiejski (CATCH THE BALL)
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +39,7 @@ typedef enum {
     COLOR_PLAYABLE,
     COLOR_FROG,
     COLOR_CAR,
+    COLOR_DEST
 } Color;
 
 // Area settings
@@ -90,6 +98,14 @@ typedef struct {
     CarType type;
 } CAR;
 
+// Destination structure
+typedef struct {
+    WIN* win;
+    Color color;
+    int x, y;           // top-left corner coordinates
+    int width, height;
+} DEST;
+
 // TIMER structure
 typedef struct {
     unsigned int frameTime;
@@ -122,6 +138,7 @@ WINDOW* InitGame()
     init_pair(COLOR_STATUS, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_FROG, COLOR_GREEN, COLOR_WHITE);
     init_pair(COLOR_CAR, COLOR_RED, COLOR_WHITE);
+    init_pair(COLOR_DEST, COLOR_GREEN, COLOR_BLUE);
 
     noecho();       // turn off displaying input and hide cursor
     curs_set(0);
@@ -204,12 +221,14 @@ void EndGame(WIN* win, GameResult result, int quitTime)
     char message[100];
     switch (result)
     {
-        // TODO: case SUCCESS:
+        case SUCCESS:
+            sprintf(message, "Congratulations! You have reached the destination.");
+            break;
         case FAILURE:
-            sprintf(message, "You died.");
+            sprintf(message, "You died. Game over.");
             break;
         case TIME_OVER:
-            sprintf(message, "Time is over.");
+            sprintf(message, "Time is over. Game over.");
             break;
         case INTERRUPTED:
             sprintf(message, "You have decided to quit the game.");
@@ -275,6 +294,17 @@ void MoveObject(OBJ* obj, int dx, int dy)
     wrefresh(obj->win->window);
 }
 
+int Collision(OBJ* obj, OBJ* other)
+{
+    return ((
+        (obj->y >= other->y && obj->y < other->y + other->height) ||
+        (other->y >= obj->y && other->y < obj->y + obj->height)
+        ) && (
+            (obj->x >= other->x && obj->x < other->x + other->width) ||
+            (other->x >= obj->x && other->x < obj->x + obj->width)
+            )) ? 1 : 0;
+}
+
 void SetObjectPosition(OBJ* obj, int x, int y)
 {
     obj->x = x;
@@ -309,6 +339,31 @@ OBJ* InitFrog(WIN* win, Color color, int width, int height)
     return frog;
 }
 
+// Frog movement
+void MoveFrog(OBJ* frog, char key, unsigned int frame)
+{
+    if (frame - frog->moveFactor >= FROG_MOVE_FACTOR)   // movement cooldown condition // TODO: move elsewhere once settings structure is implemented
+    {
+        switch (key)
+        {
+            case 'w':
+                MoveObject(frog, 0, -1);
+                break;
+            case 's':
+                MoveObject(frog, 0, 1);
+                break;
+            case 'a':
+                MoveObject(frog, -1, 0);
+                break;
+            case 'd':
+                MoveObject(frog, 1, 0);
+        }
+        frog->moveFactor = frame;
+    }
+}
+
+
+// --- CAR FUNCTIONS ---
 // Car initializer
 CAR* InitCar(WIN* win, Color color, int width, int height, int moveFactor, int y, int dynamicSpeed, int disappearing, CarType type)
 {
@@ -344,29 +399,6 @@ CAR* InitCar(WIN* win, Color color, int width, int height, int moveFactor, int y
     return car;
 }
 
-// Frog movement
-void MoveFrog(OBJ* frog, char key, unsigned int frame)
-{
-    if (frame - frog->moveFactor >= FROG_MOVE_FACTOR)   // movement cooldown condition // TODO: move elsewhere once settings structure is implemented
-    {
-        switch (key)
-        {
-            case 'w':
-                MoveObject(frog, 0, -1);
-                break;
-            case 's':
-                MoveObject(frog, 0, 1);
-                break;
-            case 'a':
-                MoveObject(frog, -1, 0);
-                break;
-            case 'd':
-                MoveObject(frog, 1, 0);
-        }
-        frog->moveFactor = frame;
-    }
-}
-
 // Reverse direction when car hits the wall (bouncing)
 void ReverseCarDirection(CAR* car)
 {
@@ -393,17 +425,39 @@ void MoveCar(CAR* car, unsigned int frame)
     mvwhline(car->obj->win->window, car->obj->y + car->obj->height, car->obj->win->x + 1, '-', car->obj->win->cols - 2);
 }
 
-int Collision(OBJ* obj, OBJ* other)
+
+// --- DESTINATION (DEST) FUNCTIONS ---
+// Destination initializer
+DEST* InitDest(WIN* win, Color color, int width, int height)
 {
-    return ((
-        (obj->y >= other->y && obj->y < other->y + other->height) ||
-        (other->y >= obj->y && other->y < obj->y + obj->height)
-        ) && (
-            (obj->x >= other->x && obj->x < other->x + other->width) ||
-            (other->x >= obj->x && other->x < obj->x + obj->width)
-            )) ? 1 : 0;
+    DEST* dest = (DEST*)malloc(sizeof(DEST));
+    dest->win = win;
+    dest->color = color;
+    dest->width = width;
+    dest->height = height;
+    dest->x = (win->cols - dest->width) / 2;
+    dest->y = 1;
+    return dest;
 }
 
+void PrintDest(DEST* dest)
+{
+    wattron(dest->win->window, COLOR_PAIR(dest->color));
+    for (int y = 0; y < dest->height; y++)
+    {
+        for (int x = 0; x < dest->width; x++)
+        {
+            mvwprintw(dest->win->window, dest->y + y, dest->x + x, " ");
+        }
+    }
+    wattron(dest->win->window, COLOR_PAIR(dest->win->color));
+}
+
+// Returns 1 if the frog has reached the destination, 0 otherwise
+int DestReached(OBJ* frog, DEST* dest)
+{
+    return (frog->y == dest->y && frog->x == dest->x) ? 1 : 0;
+}
 
 // --- TIMER FUNCTIONS ---
 // TIMER initializer
@@ -434,7 +488,7 @@ int UpdateTimer(TIMER* timer, WIN* win, int initialTime)
 
 
 // --- MAIN LOOP ---
-GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer, int quit, int initialTime)
+GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, DEST* dest, TIMER* timer, int quit, int initialTime)
 {
     int key;
     while ((key = wgetch(statusWin->window)) != quit)
@@ -445,8 +499,13 @@ GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer, int quit, int
             MoveFrog(frog, key, timer->frameNo);
         }
         MoveCar(car, timer->frameNo);   // TODO: move all cars
-
-        // TODO: return SUCCESS when reaching the destination
+        PrintDest(dest);
+        PrintObject(frog);  // force overlapping car lanes
+        PrintPosition(statusWin, frog);
+        if (DestReached(frog, dest))
+        {
+            return SUCCESS;
+        }
         if (Collision(frog, car->obj))
         {
             return FAILURE;
@@ -455,8 +514,6 @@ GameResult Play(WIN* statusWin, OBJ* frog, CAR* car, TIMER* timer, int quit, int
         {
             return TIME_OVER;
         }
-        PrintObject(frog);  // force overlapping car lanes
-        PrintPosition(statusWin, frog);
     }
     return INTERRUPTED;
 }
@@ -477,11 +534,12 @@ int main()
 
     OBJ* frog = InitFrog(playableWin, COLOR_FROG, FROG_WIDTH, FROG_HEIGHT);
     CAR* car = InitCar(playableWin, COLOR_CAR, CAR_WIDTH, CAR_HEIGHT, CAR_MOVE_FACTOR, 20, 0, 0, Enemy); // TODO: create a car on each lane
+    DEST* destination = InitDest(playableWin, COLOR_DEST, FROG_WIDTH, 1);
 
     InitStatus(statusWin, timer, frog);
     MoveObject(frog, 0, 0);         // force first render
 
-    GameResult result = Play(statusWin, frog, car, timer, KEY_QUIT, INITIAL_TIME);
+    GameResult result = Play(statusWin, frog, car, destination, timer, KEY_QUIT, INITIAL_TIME);
     EndGame(statusWin, result, QUIT_TIME);
 
     delwin(playableWin->window);    // clean-up
