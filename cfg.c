@@ -1,17 +1,18 @@
 // cfg.c
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "cfg.h"
 
-// --- CFG FUNCTIONS ---
-void LoadDefaultTimingCfg(TIMING_CFG* timing)
+// --- LOADING DEFAULT CONFIGURATION ---
+void LoadTimingDefaults(TIMING_CFG* timing)
 {
     timing->frameTime = 25;
     timing->initialTime = 20;
     timing->quitTime = 3;
 }
 
-void LoadDefaultAreaCfg(AREA_CFG* area)
+void LoadAreaDefaults(AREA_CFG* area)
 {
     area->playableRows = 35;
     area->statusRows = 3;
@@ -20,7 +21,7 @@ void LoadDefaultAreaCfg(AREA_CFG* area)
     area->offx = 0;
 }
 
-void LoadDefaultFrogCfg(FROG_CFG* frog)
+void LoadFrogDefaults(FROG_CFG* frog)
 {
     frog->moveFactor = 5;
     frog->width = 6;
@@ -34,7 +35,7 @@ void LoadDefaultFrogCfg(FROG_CFG* frog)
     strcpy(frog->shape[2], " ^  ^ ");
 }
 
-void LoadDefaultCarsCfg(CARS_CFG* cars)
+void LoadCarsDefaults(CARS_CFG* cars)
 {
     cars->nCars = 5;
     cars->moveFactor = 2;
@@ -49,7 +50,7 @@ void LoadDefaultCarsCfg(CARS_CFG* cars)
     strcpy(cars->shape[2], " O    O ");
 }
 
-void LoadDefaultControlsCfg(CONTROLS_CFG* controls)
+void LoadControlsDefaults(CONTROLS_CFG* controls)
 {
     controls->up = 'w';
     controls->down = 's';
@@ -59,28 +60,104 @@ void LoadDefaultControlsCfg(CONTROLS_CFG* controls)
 }
 
 // Load default configuration
-void LoadDefaultCfg(CFG* cfg)
+void LoadCfgDefaults(CFG* cfg)
 {
     cfg->timing = (TIMING_CFG*)malloc(sizeof(TIMING_CFG));
-    LoadDefaultTimingCfg(cfg->timing);
+    LoadTimingDefaults(cfg->timing);
 
     cfg->area = (AREA_CFG*)malloc(sizeof(AREA_CFG));
-    LoadDefaultAreaCfg(cfg->area);
+    LoadAreaDefaults(cfg->area);
 
     cfg->frog = (FROG_CFG*)malloc(sizeof(FROG_CFG));
-    LoadDefaultFrogCfg(cfg->frog);
+    LoadFrogDefaults(cfg->frog);
 
     cfg->cars = (CARS_CFG*)malloc(sizeof(CARS_CFG));
-    LoadDefaultCarsCfg(cfg->cars);
+    LoadCarsDefaults(cfg->cars);
 
     cfg->controls = (CONTROLS_CFG*)malloc(sizeof(CONTROLS_CFG));
-    LoadDefaultControlsCfg(cfg->controls);
+    LoadControlsDefaults(cfg->controls);
+}
+
+
+// --- LOADING CONFIGURATION FROM FILE ---
+void LoadTimingFromFile(TIMING_CFG* timing, FILE* file)
+{
+    fscanf(file, "FRAME_TIME=%d\n", &timing->frameTime);
+    fscanf(file, "INITIAL_TIME=%d\n", &timing->initialTime);
+    fscanf(file, "QUIT_TIME=%d\n", &timing->quitTime);
+}
+
+void LoadAreaFromFile(AREA_CFG* area, FILE* file)
+{
+    fscanf(file, "PLAYABLE_ROWS=%d\n", &area->playableRows);
+    fscanf(file, "STATUS_ROWS=%d\n", &area->statusRows);
+    fscanf(file, "COLS=%d\n", &area->cols);
+    fscanf(file, "OFFY=%d\n", &area->offy);
+    fscanf(file, "OFFX=%d\n", &area->offx);
+}
+
+void LoadFrogFromFile(FROG_CFG* frog, FILE* file)
+{
+    fscanf(file, "FROG_MOVE_FACTOR=%d\n", &frog->moveFactor);
+    fscanf(file, "FROG_WIDTH=%d\n", &frog->width);
+    fscanf(file, "FROG_HEIGHT=%d\n", &frog->height);
+    // TODO: handle shape assignment
+}
+
+void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
+{
+    fscanf(file, "N_CARS=%d\n", &cars->nCars);
+    fscanf(file, "CAR_MOVE_FACTOR=%d\n", &cars->moveFactor);
+    fscanf(file, "CAR_WIDTH=%d\n", &cars->width);
+    fscanf(file, "CAR_HEIGHT=%d\n", &cars->height);
+    // TODO: handle shape assignment
+}
+
+void LoadControlsFromFile(CONTROLS_CFG* controls, FILE* file)
+{
+    fscanf(file, "UP=%d\n", &controls->up);
+    fscanf(file, "DOWN=%d\n", &controls->down);
+    fscanf(file, "LEFT=%d\n", &controls->left);
+    fscanf(file, "RIGHT=%d\n", &controls->right);
+    fscanf(file, "QUIT=%d\n", &controls->quit);
+}
+
+// Load config from file and override default values
+void LoadCfgFromFile(CFG* cfg, const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        return; // file not found
+    }
+
+    while (!feof(file)) {   // read config file and ovrride defaults
+        char section[20];
+        fscanf(file, "%s\n", section);
+        if (strcmp(section, "---TIMING---") == 0) {
+            LoadTimingFromFile(cfg->timing, file);
+        }
+        else if (strcmp(section, "---AREA---") == 0) {
+            LoadAreaFromFile(cfg->area, file);
+        }
+        else if (strcmp(section, "---FROG---") == 0) {
+            LoadFrogFromFile(cfg->frog, file);
+        }
+        else if (strcmp(section, "---CARS---") == 0) {
+            LoadCarsFromFile(cfg->cars, file);
+        }
+        else if (strcmp(section, "---CONTROLS---") == 0) {
+            LoadControlsFromFile(cfg->controls, file);
+        }
+    }
+
+    fclose(file);
 }
 
 // Config initializer
 CFG* InitCfg()
 {
+    const char* filename = "settings.txt";  // default config file
     CFG* cfg = (CFG*)malloc(sizeof(CFG));
-    LoadDefaultCfg(cfg);
+    LoadCfgDefaults(cfg);
+    LoadCfgFromFile(cfg, filename);
     return cfg;
 }

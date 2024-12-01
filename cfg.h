@@ -55,12 +55,21 @@ typedef struct {
 } CFG;
 
 // --- CFG FUNCTIONS ---
-void LoadDefaultTimingCfg(TIMING_CFG* timing);
-void LoadDefaultAreaCfg(AREA_CFG* area);
-void LoadDefaultFrogCfg(FROG_CFG* frog);
-void LoadDefaultCarsCfg(CARS_CFG* cars);
-void LoadDefaultControlsCfg(CONTROLS_CFG* controls);
-void LoadDefaultCfg(CFG* cfg);
+// Load default values for each configuration section
+void LoadTimingDefaults(TIMING_CFG* timing);
+void LoadAreaDefaults(AREA_CFG* area);
+void LoadFrogDefaults(FROG_CFG* frog);
+void LoadCarsDefaults(CARS_CFG* cars);
+void LoadControlsDefaults(CONTROLS_CFG* controls);
+void LoadCfgDefaults(CFG* cfg);
+
+// Load configuration from file for each section
+void LoadTimingFromFile(TIMING_CFG* timing, FILE* file);
+void LoadAreaFromFile(AREA_CFG* area, FILE* file);
+void LoadFrogFromFile(FROG_CFG* frog, FILE* file);
+void LoadCarsFromFile(CARS_CFG* cars, FILE* file);
+void LoadControlsFromFile(CONTROLS_CFG* controls, FILE* file);
+void LoadCfgFromFile(CFG* cfg, const char* filename);
 CFG* InitCfg();
 
 #endif // CFG_H
