@@ -5,7 +5,7 @@
 // --- CFG STRUCTURES ---
 // Timing
 typedef struct {
-    int frameTime;
+    unsigned int frameTime;
     int initialTime;
     int quitTime;
 } TIMING_CFG;
