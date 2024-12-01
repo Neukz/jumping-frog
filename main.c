@@ -2,7 +2,7 @@
     Jumping Frog
     Kacper Neumann, 203394
 
-    This game has been developed based on the demo game provided by Prof. Michał Małafiejski (CATCH THE BALL)
+    This game has been developed based on the demo game provided by Prof. Michał Małafiejski (CATCH THE BALL).
 */
 
 #include <stdio.h>
@@ -11,27 +11,38 @@
 #include <time.h>
 #include <unistd.h>
 #include <ncurses.h>
-
+#include "cfg.h"
 
 // --- SETTINGS ---
 // General timing/speed settings
 const int FRAME_TIME = 25;      // milliseconds interval between frames
 const int INITIAL_TIME = 20;
-const int QUIT_TIME = 3;        // seconds to wait after hitting KEY_QUIT
+const int QUIT_TIME = 3;        // seconds to wait after hitting QUIT
+
+// Area settings
+const int PLAYABLE_ROWS = 35;
+const int STATUS_ROWS = 3;
+const int PLAYABLE_COLS = 100;  // the same for status window
+const int OFFY = 0;             // optional: window offset within the main window
+const int OFFX = 0;
 
 // Frog
 const int FROG_WIDTH = 6;
 const int FROG_HEIGHT = 3;
 const int FROG_MOVE_FACTOR = 5;
 
-// Car
+// Cars
 const int N_CARS = 5;
 const int CAR_WIDTH = 8;
 const int CAR_HEIGHT = 3;
 const int CAR_MOVE_FACTOR = 2;
 
 // Controls
-const int KEY_QUIT = 'q';
+const int UP = 'w';
+const int DOWN = 's';
+const int LEFT = 'a';
+const int RIGHT = 'd';
+const int QUIT = 'q';
 
 // Colors
 typedef enum {
@@ -42,13 +53,6 @@ typedef enum {
     COLOR_CAR,
     COLOR_DEST
 } Color;
-
-// Area settings
-const int PLAYABLE_ROWS = 35;
-const int PLAYABLE_COLS = 100;  // the same for status window
-const int STATUS_ROWS = 3;
-const int OFFY = 0;             // optional: window offset within the main window
-const int OFFX = 0;
 
 // Main loop (Play function) constants indicating the reason to end the game
 typedef enum {
@@ -244,7 +248,7 @@ void EndGame(WIN* win, GameResult result, int quitTime)
 
 // --- OBJ FUNCTIONS ---
 // Print game object's shape
-void PrintObject(OBJ* obj)
+void PrintObj(OBJ* obj)
 {
     wattron(obj->win->window, COLOR_PAIR(obj->color));
     for (int i = 0; i < obj->height; i++)
@@ -256,7 +260,7 @@ void PrintObject(OBJ* obj)
 }
 
 // Move the game object along both axes by 1
-void MoveObject(OBJ* obj, int dx, int dy)
+void MoveObj(OBJ* obj, int dx, int dy)
 {
     wattron(obj->win->window, COLOR_PAIR(obj->color));
 
@@ -291,7 +295,7 @@ void MoveObject(OBJ* obj, int dx, int dy)
         }
     }
 
-    PrintObject(obj);
+    PrintObj(obj);
 }
 
 int Collision(OBJ* obj, OBJ* other)
@@ -305,7 +309,7 @@ int Collision(OBJ* obj, OBJ* other)
             )) ? 1 : 0;
 }
 
-void SetObjectPosition(OBJ* obj, int x, int y)
+void SetObjPosition(OBJ* obj, int x, int y)
 {
     obj->x = x;
     obj->y = y;
@@ -330,7 +334,7 @@ OBJ* InitFrog(WIN* win, Color color, int width, int height)
     strcpy(frog->shape[1], "(----)");
     strcpy(frog->shape[2], " ^  ^ ");
 
-    SetObjectPosition(frog, (win->cols - frog->width) / 2, win->rows - frog->height - 1);
+    SetObjPosition(frog, (win->cols - frog->width) / 2, win->rows - frog->height - 1);
 
     frog->xmin = 1;
     frog->xmax = win->cols - 1;
@@ -347,16 +351,16 @@ void MoveFrog(OBJ* frog, char key, unsigned int frame)
         switch (key)
         {
             case 'w':
-                MoveObject(frog, 0, -1);
+                MoveObj(frog, 0, -1);
                 break;
             case 's':
-                MoveObject(frog, 0, 1);
+                MoveObj(frog, 0, 1);
                 break;
             case 'a':
-                MoveObject(frog, -1, 0);
+                MoveObj(frog, -1, 0);
                 break;
             case 'd':
-                MoveObject(frog, 1, 0);
+                MoveObj(frog, 1, 0);
         }
         frog->moveFactor = frame;
     }
@@ -395,7 +399,7 @@ CAR* InitCar(WIN* win, Color color, int width, int height, int moveFactor, int y
     car->dynamicSpeed = dynamicSpeed;
     car->disappearing = disappearing;
     car->type = type;
-    SetObjectPosition(obj, car->direction == 0 ? obj->xmax - obj->width : obj->xmin, y); // depends on initial direction
+    SetObjPosition(obj, car->direction == 0 ? obj->xmax - obj->width : obj->xmin, y); // depends on initial direction
     return car;
 }
 
@@ -429,7 +433,7 @@ void MoveCar(CAR* car, unsigned int frame)
     ReverseCarDirection(car);
     if (frame % car->obj->moveFactor == 0)
     {
-        MoveObject(car->obj, car->direction == 0 ? -1 : 1, 0);  // depends on direction
+        MoveObj(car->obj, car->direction == 0 ? -1 : 1, 0);  // depends on direction
     }
 
     mvwhline(car->obj->win->window, car->obj->y - 1, car->obj->win->x + 1, '-', car->obj->win->cols - 2);  // draw car lane
@@ -515,7 +519,7 @@ GameResult Play(WIN* statusWin, OBJ* frog, CAR** cars, int nCars, DEST* dest, TI
             MoveCar(cars[i], timer->frameNo);
         }
         PrintDest(dest);
-        PrintObject(frog);  // force overlapping car lanes
+        PrintObj(frog);  // force overlapping car lanes
         PrintPosition(statusWin, frog);
         if (DestReached(frog, dest))
         {
@@ -545,6 +549,7 @@ int main()
     WINDOW* mainWindow = InitGame();
     Welcome(mainWindow);
 
+    CFG* cfg = InitCfg();
     WIN* playableWin = InitWin(mainWindow, PLAYABLE_ROWS, PLAYABLE_COLS, OFFY, OFFX, COLOR_PLAYABLE, DELAY_ON);
     WIN* statusWin = InitWin(mainWindow, STATUS_ROWS, PLAYABLE_COLS, PLAYABLE_ROWS + OFFY, OFFX, COLOR_STATUS, DELAY_OFF);
 
@@ -556,11 +561,11 @@ int main()
 
     for (int i = 0; i < N_CARS; i++)
     {
-        MoveObject(cars[i]->obj, 0, 0); // force first render
+        MoveObj(cars[i]->obj, 0, 0); // force first render
     }
     InitStatus(statusWin, timer, frog);
 
-    GameResult result = Play(statusWin, frog, cars, N_CARS, destination, timer, KEY_QUIT, INITIAL_TIME);
+    GameResult result = Play(statusWin, frog, cars, N_CARS, destination, timer, QUIT, INITIAL_TIME);
     EndGame(statusWin, result, QUIT_TIME);
 
     delwin(playableWin->window);    // clean-up
