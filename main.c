@@ -44,8 +44,8 @@ typedef enum {
 } Color;
 
 // Area settings
-const int PLAYABLE_ROWS = 45;
-const int PLAYABLE_COLS = 80;  // the same for status window
+const int PLAYABLE_ROWS = 35;
+const int PLAYABLE_COLS = 100;  // the same for status window
 const int STATUS_ROWS = 3;
 const int OFFY = 0;             // optional: window offset within the main window
 const int OFFX = 0;
@@ -194,13 +194,13 @@ WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, Color color, 
 // --- STATUS FUNCTIONS ---
 void PrintTime(WIN* win, float timeLeft)
 {
-    mvwprintw(win->window, 1, 3, "Time: %.2f", timeLeft);
+    mvwprintw(win->window, 1, 2, "Time: %.2f", timeLeft);
     wrefresh(win->window);
 }
 
 void PrintPosition(WIN* win, OBJ* frog)
 {
-    mvwprintw(win->window, 1, 25, "Position: x: %d y: %d", frog->x, frog->y);
+    mvwprintw(win->window, 1, win->cols / 2 - 10, "Position: x: %d y: %d", frog->x, frog->y);
     wrefresh(win->window);
 }
 
@@ -210,7 +210,8 @@ void InitStatus(WIN* win, TIMER* timer, OBJ* frog)
     box(win->window, 0, 0);
     PrintTime(win, timer->timeLeft);
     PrintPosition(win, frog);
-    mvwprintw(win->window, 1, 55, "Kacper Neumann, 203394");
+    char* signature = "Kacper Neumann, 203394";
+    mvwprintw(win->window, 1, win->cols - strlen(signature) - 2, "%s", signature);
 }
 
 // Display information about the result of the game and count down to quit
