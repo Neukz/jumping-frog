@@ -371,7 +371,7 @@ void MoveFrog(OBJ* frog, CONTROLS_CFG* cfg, char key, int moveFactor, unsigned i
 
 // --- CAR FUNCTIONS ---
 // Car initializer
-CAR* InitCar(WIN* win, Color color, CARS_CFG* cfg, int y, int dynamicSpeed, int disappearing, CarType type)
+CAR* InitCar(WIN* win, Color color, CARS_CFG* cfg, int y, int dynamicSpeed, CarType type)
 {
     OBJ* obj = (OBJ*)malloc(sizeof(OBJ));
     obj->win = win;
@@ -390,7 +390,7 @@ CAR* InitCar(WIN* win, Color color, CARS_CFG* cfg, int y, int dynamicSpeed, int 
     car->obj = obj;
     car->direction = RandInt(0, 1);     // initial direction is random
     car->dynamicSpeed = dynamicSpeed;
-    car->disappearing = disappearing;
+    car->disappearing = RandInt(0, 1);  // may disappear
     car->type = type;
     SetObjPosition(obj, car->direction == 0 ? obj->xmax - obj->width : obj->xmin, y); // depends on initial direction
     return car;
@@ -401,8 +401,9 @@ CAR** GenerateCars(WIN* win, Color color, CARS_CFG* cfg, int frogHeight)
     CAR** cars = (CAR**)malloc(cfg->nCars * sizeof(CAR*));
     for (int i = 0; i < cfg->nCars; i++)
     {
-        // initialize cars with a frogHeight-rows gap between them (+2 for lanes above and below)
-        cars[i] = InitCar(win, color, cfg, i * (cfg->height + frogHeight + 2) + frogHeight + 2, 0, 0, Enemy);
+        // initialize cars with a frogHeight-rows gap between them (+2 for lanes above and below) // TODO: change it somehow
+        cars[i] = InitCar(win, color, cfg, i * (cfg->height + frogHeight + 2) + frogHeight + 2, 0, Enemy);
+        MoveObj(cars[i]->obj, 0, 0); // force first render
     }
     return cars;
 }
@@ -572,10 +573,6 @@ int main()
     CAR** cars = GenerateCars(playableWin, COLOR_CAR, cfg->cars, cfg->frog->height);
     DEST* destination = InitDest(playableWin, COLOR_DEST, cfg->frog->width); // destination is a single row of the frog's width
 
-    for (int i = 0; i < cfg->cars->nCars; i++)
-    {
-        MoveObj(cars[i]->obj, 0, 0); // force first render
-    }
     InitStatus(statusWin, timer, frog);
 
     GameResult result = Play(statusWin, frog, cars, destination, timer, cfg);
