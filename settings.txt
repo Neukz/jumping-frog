@@ -27,7 +27,7 @@ CAR_WIDTH=8
 CAR_HEIGHT=3
 CAR_SHAPE:
   ____  
-_/____\\_
+_/____\_
  O    O 
 
 ---CONTROLS---

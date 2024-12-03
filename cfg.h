@@ -64,6 +64,10 @@ void LoadCarsDefaults(CARS_CFG* cars);
 void LoadControlsDefaults(CONTROLS_CFG* controls);
 void LoadCfgDefaults(CFG* cfg);
 
+// Utilities for handling shapes
+void FreeShape(char** shape, int height);
+void ReadShape(FILE* file, char*** shape, int width, int height);
+
 // Load configuration from file for each section
 void LoadTimingFromFile(TIMING_CFG* timing, FILE* file);
 void LoadAreaFromFile(AREA_CFG* area, FILE* file);

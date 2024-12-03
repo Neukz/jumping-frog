@@ -14,7 +14,7 @@
 #include "cfg.h"
 
 // --- CONSTANTS ---
-// Main loop (Play function) constants indicating the reason to end the game
+// Constants indicating the reason to end the game
 typedef enum {
     SUCCESS,        // reached destination
     FAILURE,        // died
@@ -370,7 +370,7 @@ CAR** GenerateCars(WIN* win, Color color, CARS_CFG* cfg, int frogHeight)
     CAR** cars = (CAR**)malloc(cfg->nCars * sizeof(CAR*));
     for (int i = 0; i < cfg->nCars; i++)
     {
-        cars[i] = InitCar(win, color, cfg, i * (cfg->height + frogHeight) + frogHeight, 0, Enemy);
+        cars[i] = InitCar(win, color, cfg, i * (cfg->height + frogHeight) + frogHeight + 1, 0, Enemy);
         MoveObj(cars[i]->obj, 0, 0); // force first render
     }
     return cars;

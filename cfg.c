@@ -112,6 +112,35 @@ void LoadCfgDefaults(CFG* cfg)
     LoadControlsDefaults(cfg->controls);
 }
 
+void FreeShape(char** shape, int height) {
+    for (int i = 0; i < height; i++) {
+        free(shape[i]);
+    }
+    free(shape);
+}
+
+void ReadShape(FILE* file, char*** shape, int width, int height) {
+    *shape = malloc(height * sizeof(char*)); // allocate with new height and width
+    for (int i = 0; i < height; i++) {
+        (*shape)[i] = malloc((width + 1) * sizeof(char));
+    }
+
+    int ch;
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            do {
+                ch = fgetc(file);
+            } while (ch == '\n');   // skip newline characters
+
+            if (ch == EOF) {
+                return;
+            }
+
+            (*shape)[i][j] = (char)ch;
+        }
+    }
+}
+
 
 // --- LOADING CONFIGURATION FROM FILE ---
 void LoadTimingFromFile(TIMING_CFG* timing, FILE* file)
@@ -132,20 +161,24 @@ void LoadAreaFromFile(AREA_CFG* area, FILE* file)
 
 void LoadFrogFromFile(FROG_CFG* frog, FILE* file)
 {
+    FreeShape(frog->shape, frog->height);   // free default shape
     fscanf(file, "FROG_MOVE_FACTOR=%d\n", &frog->moveFactor);
     fscanf(file, "FROG_WIDTH=%d\n", &frog->width);
     fscanf(file, "FROG_HEIGHT=%d\n", &frog->height);
-    // TODO: handle shape assignment
+    fscanf(file, "FROG_SHAPE:");
+    ReadShape(file, &frog->shape, frog->width, frog->height);
 }
 
 void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
 {
+    FreeShape(cars->shape, cars->height);
     fscanf(file, "N_CARS=%d\n", &cars->nCars);
     fscanf(file, "CAR_MIN_MOVE_FACTOR=%d\n", &cars->minMoveFactor);
     fscanf(file, "CAR_MAX_MOVE_FACTOR=%d\n", &cars->maxMoveFactor);
     fscanf(file, "CAR_WIDTH=%d\n", &cars->width);
     fscanf(file, "CAR_HEIGHT=%d\n", &cars->height);
-    // TODO: handle shape assignment
+    fscanf(file, "CAR_SHAPE:");
+    ReadShape(file, &cars->shape, cars->width, cars->height);
 }
 
 void LoadControlsFromFile(CONTROLS_CFG* controls, FILE* file)
