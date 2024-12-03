@@ -49,7 +49,7 @@ typedef struct {
     int rows, cols;
 } WIN;
 
-// Game object structure - used for frog directly, extended by CAR
+// Game object structure - used for frog and destination directly, extended by CAR
 typedef struct {
     WIN* win;
     Color color;
@@ -69,14 +69,6 @@ typedef struct {
     int disappearing;   // 0 for perpetually bouncing car, 1 for disappearing (replaced with a new car)
     CarType type;
 } CAR;
-
-// Destination structure
-typedef struct {
-    WIN* win;
-    Color color;
-    int x, y;           // top-left corner coordinates
-    int width, height;
-} DEST;
 
 // Timer structure
 typedef struct {
@@ -110,7 +102,7 @@ WINDOW* InitGame()
     init_pair(COLOR_STATUS, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_FROG, COLOR_GREEN, COLOR_WHITE);
     init_pair(COLOR_CAR, COLOR_RED, COLOR_WHITE);
-    init_pair(COLOR_DEST, COLOR_GREEN, COLOR_BLUE);
+    init_pair(COLOR_DEST, COLOR_BLACK, COLOR_GREEN);
 
     noecho();       // turn off displaying input and hide cursor
     curs_set(0);
@@ -327,6 +319,24 @@ void MoveFrog(OBJ* frog, CONTROLS_CFG* cfg, char key, int moveFactor, int frame)
     }
 }
 
+// Destination initializer
+OBJ* InitDest(WIN* win, Color color)
+{
+    OBJ* dest = (OBJ*)malloc(sizeof(OBJ));
+    dest->win = win;
+    dest->color = color;
+    dest->x = (win->cols - dest->width) / 2;
+    dest->y = 1;
+    dest->width = 1;    // destination is a single point
+    dest->height = 1;
+    dest->width = 1;
+    dest->height = 1;
+    dest->shape = (char**)malloc(sizeof(char*));
+    dest->shape[0] = (char*)malloc((dest->width + 1) * sizeof(char));
+    strcpy(dest->shape[0], " ");
+    return dest;
+}
+
 
 // --- CAR FUNCTIONS ---
 // Car initializer
@@ -392,40 +402,6 @@ void MoveCar(CAR* car, int frame)
 }
 
 
-// --- DESTINATION (DEST) FUNCTIONS ---
-// Destination initializer
-DEST* InitDest(WIN* win, Color color, int width)
-{
-    DEST* dest = (DEST*)malloc(sizeof(DEST));
-    dest->win = win;
-    dest->color = color;
-    dest->width = width;
-    dest->height = 1;   // single row
-    dest->x = (win->cols - dest->width) / 2;
-    dest->y = 1;
-    return dest;
-}
-
-void PrintDest(DEST* dest)
-{
-    wattron(dest->win->window, COLOR_PAIR(dest->color));
-    for (int y = 0; y < dest->height; y++)
-    {
-        for (int x = 0; x < dest->width; x++)
-        {
-            mvwprintw(dest->win->window, dest->y + y, dest->x + x, " ");
-        }
-    }
-    wattron(dest->win->window, COLOR_PAIR(dest->win->color));
-    wrefresh(dest->win->window);
-}
-
-// Returns 1 if the frog has reached the destination, 0 otherwise
-int DestReached(OBJ* frog, DEST* dest)
-{
-    return (frog->y == dest->y && frog->x == dest->x) ? 1 : 0;
-}
-
 // --- TIMER FUNCTIONS ---
 // TIMER initializer
 TIMER* InitTimer(TIMING_CFG* cfg)
@@ -455,8 +431,9 @@ int UpdateTimer(TIMER* timer, WIN* win, int initialTime)
 
 
 // --- MAIN LOOP ---
-GameResult Play(WIN* status, OBJ* frog, CAR** cars, DEST* dest, TIMER* timer, CFG* cfg)
+GameResult Play(WIN* status, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer, CFG* cfg)
 {
+    PrintObj(dest);
     int key;
     while ((key = wgetch(status->window)) != cfg->controls->quit)
     {
@@ -469,10 +446,9 @@ GameResult Play(WIN* status, OBJ* frog, CAR** cars, DEST* dest, TIMER* timer, CF
         {
             MoveCar(cars[i], timer->frameNo);
         }
-        PrintDest(dest);
         PrintObj(frog);  // force overlapping car lanes
         PrintPosition(status, frog);
-        if (DestReached(frog, dest))
+        if (Collision(frog, dest))
         {
             return SUCCESS;
         }
@@ -493,7 +469,7 @@ GameResult Play(WIN* status, OBJ* frog, CAR** cars, DEST* dest, TIMER* timer, CF
 
 
 // --- CLEANUP ---
-void Cleanup(WIN* playableWin, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** cars, DEST* dest, TIMER* timer)
+void Cleanup(WIN* playableWin, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer)
 {
     delwin(playableWin->window);
     free(playableWin);
@@ -528,7 +504,7 @@ int main()
     TIMER* timer = InitTimer(cfg->timing);
     OBJ* frog = InitFrog(playableWin, COLOR_FROG, cfg->frog);
     CAR** cars = GenerateCars(playableWin, COLOR_CAR, cfg->cars, cfg->frog->height);
-    DEST* dest = InitDest(playableWin, COLOR_DEST, cfg->frog->width); // destination is a single row of the frog's width
+    OBJ* dest = InitDest(playableWin, COLOR_DEST);
 
     InitStatus(status, timer, frog);
 
