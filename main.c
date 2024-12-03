@@ -13,7 +13,6 @@
 #include <ncurses.h>
 #include "cfg.h"
 
-
 // --- CONSTANTS ---
 // Main loop (Play function) constants indicating the reason to end the game
 typedef enum {
@@ -23,12 +22,14 @@ typedef enum {
     INTERRUPTED     // decision to quit
 } GameResult;
 
-// Delay constants for real-time
-const int DELAY_ON = 1;
-const int DELAY_OFF = 0;
+// Car types
+typedef enum {
+    Enemy,      // normal car
+    Neutral,    // stops when the frog is close
+    Friendly    // helps the frog on demand
+} CarType;
 
-
-// --- DATA STRUCTURES ---
+// Color identifiers
 typedef enum {
     COLOR_MAIN,
     COLOR_STATUS,
@@ -38,6 +39,8 @@ typedef enum {
     COLOR_DEST
 } Color;
 
+
+// --- DATA STRUCTURES ---
 // Window structure
 typedef struct {
     WINDOW* window; // extends ncurses window
@@ -57,12 +60,6 @@ typedef struct {
     int width, height;
     char** shape;
 } OBJ;
-
-typedef enum {
-    Enemy,      // normal car
-    Neutral,    // stops when the frog is close
-    Friendly    // helps the frog on demand
-} CarType;
 
 // Car structure
 typedef struct {
@@ -146,7 +143,7 @@ void CleanWin(WIN* win)
 }
 
 // Window initializer
-WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, Color color, int delay)
+WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, Color color)
 {
     WIN* win = (WIN*)malloc(sizeof(WIN));
     win->x = x;
@@ -155,11 +152,8 @@ WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, Color color, 
     win->cols = cols;
     win->color = color;
     win->window = subwin(mainWindow, rows, cols, y, x); // create the window inside of the main window
+    nodelay(win->window, TRUE);                     // non-blocking input for real-time
     CleanWin(win);
-    if (delay == DELAY_OFF)
-    {
-        nodelay(win->window, TRUE);                     // non-blocking input for real-time
-    }
     wrefresh(win->window);
     return win;
 }
@@ -349,7 +343,7 @@ CAR* InitCar(WIN* win, Color color, CARS_CFG* cfg, int y, int dynamicSpeed, CarT
     obj->color = color;
     obj->width = cfg->width;
     obj->height = cfg->height;
-    obj->moveFactor = cfg->moveFactor;
+    obj->moveFactor = RandInt(cfg->minMoveFactor, cfg->maxMoveFactor);  // random speed
     obj->xmin = 1;
     obj->xmax = win->cols - 1;
     obj->ymin = obj->y; // cars don't move vertically
@@ -535,8 +529,8 @@ int main()
     Welcome(mainWindow);
 
     CFG* cfg = InitCfg();
-    WIN* playableWin = InitWin(mainWindow, cfg->area->playableRows, cfg->area->cols, cfg->area->offy, cfg->area->offx, COLOR_PLAYABLE, DELAY_ON);
-    WIN* statusWin = InitWin(mainWindow, cfg->area->statusRows, cfg->area->cols, cfg->area->playableRows + cfg->area->offy, cfg->area->offx, COLOR_STATUS, DELAY_OFF);
+    WIN* playableWin = InitWin(mainWindow, cfg->area->playableRows, cfg->area->cols, cfg->area->offy, cfg->area->offx, COLOR_PLAYABLE);
+    WIN* statusWin = InitWin(mainWindow, cfg->area->statusRows, cfg->area->cols, cfg->area->playableRows + cfg->area->offy, cfg->area->offx, COLOR_STATUS);
     TIMER* timer = InitTimer(cfg->timing);
     OBJ* frog = InitFrog(playableWin, COLOR_FROG, cfg->frog);
     CAR** cars = GenerateCars(playableWin, COLOR_CAR, cfg->cars, cfg->frog->height);

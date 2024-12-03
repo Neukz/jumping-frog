@@ -30,7 +30,8 @@ typedef struct {
 // Cars
 typedef struct {
     int nCars;
-    int moveFactor;
+    int minMoveFactor;
+    int maxMoveFactor;
     int width;
     int height;
     char** shape;

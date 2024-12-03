@@ -24,7 +24,8 @@ const int FROG_HEIGHT = 3;
 
 // Cars
 const int N_CARS = 5;
-const int CAR_MOVE_FACTOR = 2;
+const int CAR_MIN_MOVE_FACTOR = 2;
+const int CAR_MAX_MOVE_FACTOR = 4;
 const int CAR_WIDTH = 8;
 const int CAR_HEIGHT = 3;
 
@@ -70,7 +71,8 @@ void LoadFrogDefaults(FROG_CFG* frog)
 void LoadCarsDefaults(CARS_CFG* cars)
 {
     cars->nCars = N_CARS;
-    cars->moveFactor = CAR_MOVE_FACTOR;
+    cars->minMoveFactor = CAR_MIN_MOVE_FACTOR;
+    cars->maxMoveFactor = CAR_MAX_MOVE_FACTOR;
     cars->width = CAR_WIDTH;
     cars->height = CAR_HEIGHT;
     cars->shape = malloc(cars->height * sizeof(char*));
@@ -139,7 +141,8 @@ void LoadFrogFromFile(FROG_CFG* frog, FILE* file)
 void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
 {
     fscanf(file, "N_CARS=%d\n", &cars->nCars);
-    fscanf(file, "CAR_MOVE_FACTOR=%d\n", &cars->moveFactor);
+    fscanf(file, "CAR_MIN_MOVE_FACTOR=%d\n", &cars->minMoveFactor);
+    fscanf(file, "CAR_MAX_MOVE_FACTOR=%d\n", &cars->maxMoveFactor);
     fscanf(file, "CAR_WIDTH=%d\n", &cars->width);
     fscanf(file, "CAR_HEIGHT=%d\n", &cars->height);
     // TODO: handle shape assignment
