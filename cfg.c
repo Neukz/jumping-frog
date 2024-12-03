@@ -4,28 +4,60 @@
 #include <string.h>
 #include "cfg.h"
 
+// --- DEFAULT SETTINGS ---
+// Timing
+const int FRAME_TIME = 25;      // milliseconds interval between frames
+const int INITIAL_TIME = 20;
+const int QUIT_TIME = 3;        // seconds to wait after hitting QUIT
+
+// Area
+const int PLAYABLE_ROWS = 35;
+const int STATUS_ROWS = 3;
+const int PLAYABLE_COLS = 100;  // the same for both windows
+const int OFFY = 0;             // optional: window offset within the main window
+const int OFFX = 0;
+
+// Frog
+const int FROG_MOVE_FACTOR = 5;
+const int FROG_WIDTH = 6;
+const int FROG_HEIGHT = 3;
+
+// Cars
+const int N_CARS = 5;
+const int CAR_MOVE_FACTOR = 2;
+const int CAR_WIDTH = 8;
+const int CAR_HEIGHT = 3;
+
+// Controls
+const int UP = 'w';
+const int DOWN = 's';
+const int LEFT = 'a';
+const int RIGHT = 'd';
+const int QUIT = 'q';
+
+
 // --- LOADING DEFAULT CONFIGURATION ---
 void LoadTimingDefaults(TIMING_CFG* timing)
 {
-    timing->frameTime = 25;
-    timing->initialTime = 20;
-    timing->quitTime = 3;
+    timing->frameTime = FRAME_TIME;
+    timing->initialTime = INITIAL_TIME;
+    timing->quitTime = QUIT_TIME;
 }
 
 void LoadAreaDefaults(AREA_CFG* area)
 {
-    area->playableRows = 35;
-    area->statusRows = 3;
-    area->cols = 100;
-    area->offy = 0;
-    area->offx = 0;
+    area->playableRows = PLAYABLE_ROWS;
+    area->statusRows = STATUS_ROWS;
+    area->cols = PLAYABLE_COLS;
+    area->offy = OFFY;
+    area->offx = OFFX;
 }
 
 void LoadFrogDefaults(FROG_CFG* frog)
 {
-    frog->moveFactor = 5;
-    frog->width = 6;
-    frog->height = 3;
+    frog->moveFactor = FROG_MOVE_FACTOR;
+    frog->width = FROG_WIDTH;
+    frog->height = FROG_HEIGHT;
     frog->shape = malloc(frog->height * sizeof(char*));
     for (int i = 0; i < frog->height; i++) {
         frog->shape[i] = malloc((frog->width + 1) * sizeof(char));
@@ -37,10 +69,10 @@ void LoadFrogDefaults(FROG_CFG* frog)
 
 void LoadCarsDefaults(CARS_CFG* cars)
 {
-    cars->nCars = 5;
-    cars->moveFactor = 2;
-    cars->width = 8;
-    cars->height = 3;
+    cars->nCars = N_CARS;
+    cars->moveFactor = CAR_MOVE_FACTOR;
+    cars->width = CAR_WIDTH;
+    cars->height = CAR_HEIGHT;
     cars->shape = malloc(cars->height * sizeof(char*));
     for (int i = 0; i < cars->height; i++) {
         cars->shape[i] = malloc((cars->width + 1) * sizeof(char));
@@ -52,11 +84,11 @@ void LoadCarsDefaults(CARS_CFG* cars)
 
 void LoadControlsDefaults(CONTROLS_CFG* controls)
 {
-    controls->up = 'w';
-    controls->down = 's';
-    controls->left = 'a';
-    controls->right = 'd';
-    controls->quit = 'q';
+    controls->up = UP;
+    controls->down = DOWN;
+    controls->left = LEFT;
+    controls->right = RIGHT;
+    controls->quit = QUIT;
 }
 
 // Load default configuration

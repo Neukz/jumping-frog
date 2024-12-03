@@ -13,37 +13,8 @@
 #include <ncurses.h>
 #include "cfg.h"
 
-// --- SETTINGS ---
-// General timing/speed settings
-// const int FRAME_TIME = 25;      // milliseconds interval between frames
-// const int INITIAL_TIME = 20;
-// const int QUIT_TIME = 3;        // seconds to wait after hitting QUIT
 
-// // Area settings
-// const int PLAYABLE_ROWS = 35;
-// const int STATUS_ROWS = 3;
-// const int PLAYABLE_COLS = 100;  // the same for status window
-// const int OFFY = 0;             // optional: window offset within the main window
-// const int OFFX = 0;
-
-// // Frog
-// const int FROG_WIDTH = 6;
-// const int FROG_HEIGHT = 3;
-// const int FROG_MOVE_FACTOR = 5;
-
-// // Cars
-// const int N_CARS = 5;
-// const int CAR_WIDTH = 8;
-// const int CAR_HEIGHT = 3;
-// const int CAR_MOVE_FACTOR = 2;
-
-// // Controls
-// const int UP = 'w';
-// const int DOWN = 's';
-// const int LEFT = 'a';
-// const int RIGHT = 'd';
-// const int QUIT = 'q';
-
+// --- CONSTANTS ---
 // Main loop (Play function) constants indicating the reason to end the game
 typedef enum {
     SUCCESS,        // reached destination
@@ -112,7 +83,7 @@ typedef struct {
 
 // Timer structure
 typedef struct {
-    unsigned int frameTime;
+    int frameTime;
     float timeLeft;
     int frameNo;
 } TIMER;
@@ -344,7 +315,7 @@ OBJ* InitFrog(WIN* win, Color color, FROG_CFG* cfg)
 }
 
 // Frog movement
-void MoveFrog(OBJ* frog, CONTROLS_CFG* cfg, char key, int moveFactor, unsigned int frame)
+void MoveFrog(OBJ* frog, CONTROLS_CFG* cfg, char key, int moveFactor, int frame)
 {
     if (frame - frog->moveFactor >= moveFactor)   // movement cooldown condition
     {
@@ -401,8 +372,7 @@ CAR** GenerateCars(WIN* win, Color color, CARS_CFG* cfg, int frogHeight)
     CAR** cars = (CAR**)malloc(cfg->nCars * sizeof(CAR*));
     for (int i = 0; i < cfg->nCars; i++)
     {
-        // initialize cars with a frogHeight-rows gap between them (+2 for lanes above and below) // TODO: change it somehow
-        cars[i] = InitCar(win, color, cfg, i * (cfg->height + frogHeight + 2) + frogHeight + 2, 0, Enemy);
+        cars[i] = InitCar(win, color, cfg, i * (cfg->height + frogHeight) + frogHeight, 0, Enemy);
         MoveObj(cars[i]->obj, 0, 0); // force first render
     }
     return cars;
@@ -422,7 +392,7 @@ void ReverseCarDirection(CAR* car)
 }
 
 // Car movement
-void MoveCar(CAR* car, unsigned int frame)
+void MoveCar(CAR* car, int frame)
 {
     ReverseCarDirection(car);
     if (frame % car->obj->moveFactor == 0)
@@ -430,8 +400,7 @@ void MoveCar(CAR* car, unsigned int frame)
         MoveObj(car->obj, car->direction == 0 ? -1 : 1, 0);  // depends on direction
     }
 
-    mvwhline(car->obj->win->window, car->obj->y - 1, car->obj->win->x + 1, '-', car->obj->win->cols - 2);  // draw car lane
-    mvwhline(car->obj->win->window, car->obj->y + car->obj->height, car->obj->win->x + 1, '-', car->obj->win->cols - 2);
+    mvwhline(car->obj->win->window, car->obj->y + car->obj->height, car->obj->win->x + 1, '-', car->obj->win->cols - 2); // draw lane
 }
 
 
