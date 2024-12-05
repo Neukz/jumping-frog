@@ -6,7 +6,8 @@
 // Timing
 typedef struct {
     int frameTime;
-    int initialTime;
+    float initialTime;
+    int carSpawnFactor;
     int quitTime;
 } TIMING_CFG;
 

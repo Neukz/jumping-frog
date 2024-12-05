@@ -7,7 +7,8 @@
 // --- DEFAULT SETTINGS ---
 // Timing
 const int FRAME_TIME = 25;      // milliseconds interval between frames
-const int INITIAL_TIME = 20;
+const float INITIAL_TIME = 20.0;
+const int CAR_SPAWN_FACTOR = 100;
 const int QUIT_TIME = 3;        // seconds to wait after hitting QUIT
 
 // Area
@@ -42,6 +43,7 @@ void LoadTimingDefaults(TIMING_CFG* timing)
 {
     timing->frameTime = FRAME_TIME;
     timing->initialTime = INITIAL_TIME;
+    timing->carSpawnFactor = CAR_SPAWN_FACTOR;
     timing->quitTime = QUIT_TIME;
 }
 
@@ -146,7 +148,8 @@ void ReadShape(FILE* file, char*** shape, int width, int height) {
 void LoadTimingFromFile(TIMING_CFG* timing, FILE* file)
 {
     fscanf(file, "FRAME_TIME=%d\n", &timing->frameTime);
-    fscanf(file, "INITIAL_TIME=%d\n", &timing->initialTime);
+    fscanf(file, "INITIAL_TIME=%f\n", &timing->initialTime);
+    fscanf(file, "CAR_SPAWN_FACTOR=%d\n", &timing->carSpawnFactor);
     fscanf(file, "QUIT_TIME=%d\n", &timing->quitTime);
 }
 

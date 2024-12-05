@@ -72,9 +72,9 @@ typedef struct {
 
 // Timer structure
 typedef struct {
+    int frameNo;
     int frameTime;
     float timeLeft;
-    int frameNo;
 } TIMER;
 
 
@@ -102,7 +102,7 @@ WINDOW* InitGame()
     init_pair(COLOR_STATUS, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_FROG, COLOR_GREEN, COLOR_WHITE);
     init_pair(COLOR_CAR, COLOR_RED, COLOR_WHITE);
-    init_pair(COLOR_DEST, COLOR_BLACK, COLOR_GREEN);
+    init_pair(COLOR_DEST, COLOR_GREEN, COLOR_WHITE);
 
     noecho();       // turn off displaying input and hide cursor
     curs_set(0);
@@ -120,8 +120,7 @@ void Welcome(WINDOW* win)
 
 
 // --- WIN FUNCTIONS ---
-// Cleaning the window (prints " ")
-void CleanWin(WIN* win)
+void ClearWin(WIN* win)
 {
     wattron(win->window, COLOR_PAIR(win->color));
     for (int row = 0; row < win->rows; row++)
@@ -145,7 +144,7 @@ WIN* InitWin(WINDOW* mainWindow, int rows, int cols, int y, int x, Color color)
     win->color = color;
     win->window = subwin(mainWindow, rows, cols, y, x); // create the window inside of the main window
     nodelay(win->window, TRUE);                     // non-blocking input for real-time
-    CleanWin(win);
+    ClearWin(win);
     wrefresh(win->window);
     return win;
 }
@@ -170,14 +169,14 @@ void InitStatus(WIN* status, TIMER* timer, OBJ* frog)
     box(status->window, 0, 0);
     PrintTime(status, timer->timeLeft);
     PrintPosition(status, frog);
-    char* signature = "Kacper Neumann, 203394";
+    const char* signature = "Kacper Neumann, 203394";
     mvwprintw(status->window, 1, status->cols - strlen(signature) - 2, "%s", signature);
 }
 
 // Display information about the result of the game and count down to quit
 void EndGame(WIN* status, GameResult result, int quitTime)
 {
-    CleanWin(status);
+    ClearWin(status);
     char message[100];
     switch (result)
     {
@@ -275,6 +274,17 @@ void AllocateShape(OBJ* obj, char** shape, int height, int width)
     }
 }
 
+void ClearShape(OBJ* obj)
+{
+    for (int i = 0; i < obj->height; i++)
+    {
+        for (int j = 0; j < obj->width; j++)
+        {
+            mvwprintw(obj->win->window, obj->y + i, obj->x + j, " ");
+        }
+    }
+}
+
 // Frog initializer
 OBJ* InitFrog(WIN* win, Color color, FROG_CFG* cfg)
 {
@@ -333,14 +343,14 @@ OBJ* InitDest(WIN* win, Color color)
     dest->height = 1;
     dest->shape = (char**)malloc(sizeof(char*));
     dest->shape[0] = (char*)malloc((dest->width + 1) * sizeof(char));
-    strcpy(dest->shape[0], " ");
+    strcpy(dest->shape[0], "*");
     return dest;
 }
 
 
 // --- CAR FUNCTIONS ---
 // Car initializer
-CAR* InitCar(WIN* win, Color color, CARS_CFG* cfg, int y, int dynamicSpeed, CarType type)
+CAR* InitCar(WIN* win, Color color, CARS_CFG* cfg, int y, int disappearing, CarType type)
 {
     OBJ* obj = (OBJ*)malloc(sizeof(OBJ));
     obj->win = win;
@@ -357,12 +367,18 @@ CAR* InitCar(WIN* win, Color color, CARS_CFG* cfg, int y, int dynamicSpeed, CarT
     CAR* car = (CAR*)malloc(sizeof(CAR));
     car->obj = obj;
     car->direction = RandInt(0, 1);     // initial direction is random
-    car->dynamicSpeed = dynamicSpeed;
-    car->disappearing = RandInt(0, 1);  // may disappear
+    car->dynamicSpeed = RandInt(0, 1);  // may change speed
+    car->disappearing = disappearing;
     car->type = type;
     obj->x = car->direction == 0 ? obj->xmax - obj->width : obj->xmin;  // depends on initial direction
     obj->y = y;
     return car;
+}
+
+// Calculate car's y-coordinate adjusted with frog's height so that there are safe lanes
+int CalculateCarY(int carIndex, int carHeight, int frogHeight)
+{
+    return carIndex * (carHeight + frogHeight) + frogHeight + 1;
 }
 
 CAR** GenerateCars(WIN* win, Color color, CARS_CFG* cfg, int frogHeight)
@@ -370,35 +386,66 @@ CAR** GenerateCars(WIN* win, Color color, CARS_CFG* cfg, int frogHeight)
     CAR** cars = (CAR**)malloc(cfg->nCars * sizeof(CAR*));
     for (int i = 0; i < cfg->nCars; i++)
     {
-        cars[i] = InitCar(win, color, cfg, i * (cfg->height + frogHeight) + frogHeight + 1, 0, Enemy);
+        // cars may be disappearing and are enemies initially
+        cars[i] = InitCar(win, color, cfg, CalculateCarY(i, cfg->height, frogHeight), RandInt(0, 1), Enemy);
         MoveObj(cars[i]->obj, 0, 0); // force first render
     }
     return cars;
 }
 
-// Reverse direction when car hits the wall (bouncing)
-void ReverseCarDirection(CAR* car)
+int BorderReached(CAR* car)
 {
     if (car->direction == 1 && car->obj->x == car->obj->xmax - car->obj->width)
     {
-        car->direction = 0;
+        return 1;   // right border reached
     }
     else if (car->direction == 0 && car->obj->x == car->obj->xmin)
+    {
+        return 0;   // left
+    }
+    return -1;      // not reached
+}
+
+// Reverse direction when car hits the wall (bouncing)
+void ReverseCarDirection(CAR* car)
+{
+    int reached = BorderReached(car);
+    if (reached == 1)
+    {
+        car->direction = 0;
+    }
+    else if (reached == 0)
     {
         car->direction = 1;
     }
 }
 
 // Car movement
-void MoveCar(CAR* car, int frame)
+void MoveCar(CAR** carPtr, int frame)   // pointer to pointer to affect the original one
 {
+    CAR* car = *carPtr;
+    if (car == NULL)
+    {
+        return;
+    }
+
     ReverseCarDirection(car);
     if (frame % car->obj->moveFactor == 0)
     {
         MoveObj(car->obj, car->direction == 0 ? -1 : 1, 0);  // depends on direction
     }
 
-    mvwhline(car->obj->win->window, car->obj->y + car->obj->height, car->obj->win->x + 1, '-', car->obj->win->cols - 2); // draw lane
+    if (car->disappearing && BorderReached(car) > -1)
+    {
+        ClearShape(car->obj);
+        FreeShape(car->obj->shape, car->obj->height);
+        free(car->obj);
+        free(car);
+        *carPtr = NULL; // update the pointer in the array of cars
+    }
+
+    // TODO: move to independent function
+    // mvwhline(car->obj->win->window, car->obj->y + car->obj->height, car->obj->win->x + 1, '-', car->obj->win->cols - 2); // draw lane
 }
 
 
@@ -409,7 +456,7 @@ TIMER* InitTimer(TIMING_CFG* cfg)
     TIMER* timer = (TIMER*)malloc(sizeof(TIMER));
     timer->frameNo = 1;
     timer->frameTime = cfg->frameTime;
-    timer->timeLeft = cfg->initialTime / 1.0;
+    timer->timeLeft = cfg->initialTime;
     return timer;
 }
 
@@ -426,12 +473,12 @@ int UpdateTimer(TIMER* timer, WIN* win, int initialTime)
         usleep(timer->frameTime * 1000);
     }
     PrintTime(win, timer->timeLeft);
-    return timer->timeLeft == 0 ? 1 : 0; // 1 if time has elapsed, 0 otherwise    
+    return timer->timeLeft == 0 ? 1 : 0;    // 1 if time has elapsed, 0 otherwise    
 }
 
 
 // --- MAIN LOOP ---
-GameResult Play(WIN* status, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer, CFG* cfg)
+GameResult Play(WIN* playable, WIN* status, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer, CFG* cfg)
 {
     PrintObj(dest);
     int key;
@@ -442,9 +489,18 @@ GameResult Play(WIN* status, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer, CFG
         {
             MoveFrog(frog, cfg->controls, key, cfg->frog->moveFactor, timer->frameNo);
         }
+        // TODO: move to independent function
         for (int i = 0; i < cfg->cars->nCars; i++)
         {
-            MoveCar(cars[i], timer->frameNo);
+            if (cars[i] != NULL)
+            {
+                MoveCar(&cars[i], timer->frameNo);
+            }
+            else if (timer->frameNo % cfg->timing->carSpawnFactor == 0)
+            {
+                // the new one will be disappearing as well
+                cars[i] = InitCar(playable, COLOR_CAR, cfg->cars, CalculateCarY(i, cfg->cars->height, cfg->frog->height), 1, Enemy);
+            }
         }
         PrintObj(frog);  // force overlapping car lanes
         PrintPosition(status, frog);
@@ -452,9 +508,10 @@ GameResult Play(WIN* status, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer, CFG
         {
             return SUCCESS;
         }
+        // TODO: move to independent function
         for (int i = 0; i < cfg->cars->nCars; i++)
         {
-            if (Collision(frog, cars[i]->obj))
+            if (cars[i] != NULL && Collision(frog, cars[i]->obj))
             {
                 return FAILURE;
             }
@@ -469,22 +526,27 @@ GameResult Play(WIN* status, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer, CFG
 
 
 // --- CLEANUP ---
-void Cleanup(WIN* playableWin, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer)
+void Cleanup(WIN* playable, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer)
 {
-    delwin(playableWin->window);
-    free(playableWin);
+    delwin(playable->window);   // TODO: include more cleanup
+    free(playable);
     delwin(status->window);
     free(status);
     delwin(mainWindow);
+    free(frog->shape);
     free(frog);
     for (int i = 0; i < sizeof(cars) / sizeof(CAR*); i++)
     {
-        free(cars[i]->obj);
-        free(cars[i]);
+        if (cars[i] != NULL)    // watch out disappearing cars
+        {
+            free(cars[i]->obj->shape);
+            free(cars[i]->obj);
+            free(cars[i]);
+        }
     }
     free(cars);
     free(dest);
-    free(timer); // TODO: add the rest of pointers to the cleanup function
+    free(timer);
     endwin();
     refresh();
 }
@@ -499,17 +561,17 @@ int main()
     Welcome(mainWindow);
 
     CFG* cfg = InitCfg();
-    WIN* playableWin = InitWin(mainWindow, cfg->area->playableRows, cfg->area->cols, cfg->area->offy, cfg->area->offx, COLOR_PLAYABLE);
+    WIN* playable = InitWin(mainWindow, cfg->area->playableRows, cfg->area->cols, cfg->area->offy, cfg->area->offx, COLOR_PLAYABLE);
     WIN* status = InitWin(mainWindow, cfg->area->statusRows, cfg->area->cols, cfg->area->playableRows + cfg->area->offy, cfg->area->offx, COLOR_STATUS);
     TIMER* timer = InitTimer(cfg->timing);
-    OBJ* frog = InitFrog(playableWin, COLOR_FROG, cfg->frog);
-    CAR** cars = GenerateCars(playableWin, COLOR_CAR, cfg->cars, cfg->frog->height);
-    OBJ* dest = InitDest(playableWin, COLOR_DEST);
+    OBJ* frog = InitFrog(playable, COLOR_FROG, cfg->frog);
+    CAR** cars = GenerateCars(playable, COLOR_CAR, cfg->cars, cfg->frog->height);
+    OBJ* dest = InitDest(playable, COLOR_DEST);
 
     InitStatus(status, timer, frog);
 
-    GameResult result = Play(status, frog, cars, dest, timer, cfg);
+    GameResult result = Play(playable, status, frog, cars, dest, timer, cfg);
     EndGame(status, result, cfg->timing->quitTime);
-    Cleanup(playableWin, status, mainWindow, frog, cars, dest, timer);
+    Cleanup(playable, status, mainWindow, frog, cars, dest, timer);
     return EXIT_SUCCESS;
 }
