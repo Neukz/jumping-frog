@@ -3,6 +3,10 @@
     Kacper Neumann, 203394
 
     This game has been developed based on the demo game provided by Prof. Michał Małafiejski (CATCH THE BALL).
+    Source: http://gut.animima.org/pp/Projekt1/demogame/win1.c
+
+    Functions do not exceed 1024 bytes.
+    Counter: https://gre-v-el.github.io/Cpp-Func-Length-Counter/
 */
 
 #include <stdio.h>
@@ -443,9 +447,15 @@ void MoveCar(CAR** carPtr, int frame)   // pointer to pointer to affect the orig
         free(car);
         *carPtr = NULL; // update the pointer in the array of cars
     }
+}
 
-    // TODO: move to independent function
-    // mvwhline(car->obj->win->window, car->obj->y + car->obj->height, car->obj->win->x + 1, '-', car->obj->win->cols - 2); // draw lane
+void PrintLanes(WIN* win, CARS_CFG* cfg, int frogHeight)
+{
+    for (int i = 0; i < cfg->nCars; i++)
+    {
+        int y = CalculateCarY(i, cfg->height, frogHeight);
+        mvwhline(win->window, y + cfg->height, win->x + 1, '-', win->cols - 2); // draw lane below the car   
+    }
 }
 
 
@@ -502,6 +512,7 @@ GameResult Play(WIN* playable, WIN* status, OBJ* frog, CAR** cars, OBJ* dest, TI
                 cars[i] = InitCar(playable, COLOR_CAR, cfg->cars, CalculateCarY(i, cfg->cars->height, cfg->frog->height), 1, Enemy);
             }
         }
+        PrintLanes(playable, cfg->cars, cfg->frog->height);
         PrintObj(frog);  // force overlapping car lanes
         PrintPosition(status, frog);
         if (Collision(frog, dest))
