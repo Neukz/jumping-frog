@@ -9,6 +9,7 @@
 const int FRAME_TIME = 25;      // milliseconds interval between frames
 const float INITIAL_TIME = 20.0;
 const int CAR_SPAWN_FACTOR = 100;
+const int CAR_SPEED_CHANGE_FACTOR = 200;
 const int QUIT_TIME = 3;        // seconds to wait after hitting QUIT
 
 // Area
@@ -44,6 +45,7 @@ void LoadTimingDefaults(TIMING_CFG* timing)
     timing->frameTime = FRAME_TIME;
     timing->initialTime = INITIAL_TIME;
     timing->carSpawnFactor = CAR_SPAWN_FACTOR;
+    timing->carSpeedChangeFactor = CAR_SPEED_CHANGE_FACTOR;
     timing->quitTime = QUIT_TIME;
 }
 
@@ -114,6 +116,8 @@ void LoadCfgDefaults(CFG* cfg)
     LoadControlsDefaults(cfg->controls);
 }
 
+
+// --- SHAPE UTILITIES ---
 void FreeShape(char** shape, int height) {
     for (int i = 0; i < height; i++) {
         free(shape[i]);
@@ -121,7 +125,7 @@ void FreeShape(char** shape, int height) {
     free(shape);
 }
 
-void ReadShape(FILE* file, char*** shape, int width, int height) {
+void ReadShapeFromFile(FILE* file, char*** shape, int width, int height) {
     *shape = malloc(height * sizeof(char*)); // allocate with new height and width
     for (int i = 0; i < height; i++) {
         (*shape)[i] = malloc((width + 1) * sizeof(char));
@@ -150,6 +154,7 @@ void LoadTimingFromFile(TIMING_CFG* timing, FILE* file)
     fscanf(file, "FRAME_TIME=%d\n", &timing->frameTime);
     fscanf(file, "INITIAL_TIME=%f\n", &timing->initialTime);
     fscanf(file, "CAR_SPAWN_FACTOR=%d\n", &timing->carSpawnFactor);
+    fscanf(file, "CAR_SPEED_CHANGE_FACTOR=%d\n", &timing->carSpeedChangeFactor);
     fscanf(file, "QUIT_TIME=%d\n", &timing->quitTime);
 }
 
@@ -169,7 +174,7 @@ void LoadFrogFromFile(FROG_CFG* frog, FILE* file)
     fscanf(file, "FROG_WIDTH=%d\n", &frog->width);
     fscanf(file, "FROG_HEIGHT=%d\n", &frog->height);
     fscanf(file, "FROG_SHAPE:");
-    ReadShape(file, &frog->shape, frog->width, frog->height);
+    ReadShapeFromFile(file, &frog->shape, frog->width, frog->height);
 }
 
 void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
@@ -181,7 +186,7 @@ void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
     fscanf(file, "CAR_WIDTH=%d\n", &cars->width);
     fscanf(file, "CAR_HEIGHT=%d\n", &cars->height);
     fscanf(file, "CAR_SHAPE:");
-    ReadShape(file, &cars->shape, cars->width, cars->height);
+    ReadShapeFromFile(file, &cars->shape, cars->width, cars->height);
 }
 
 void LoadControlsFromFile(CONTROLS_CFG* controls, FILE* file)

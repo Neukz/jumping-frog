@@ -8,6 +8,7 @@ typedef struct {
     int frameTime;
     float initialTime;
     int carSpawnFactor;
+    int carSpeedChangeFactor;
     int quitTime;
 } TIMING_CFG;
 
@@ -57,7 +58,7 @@ typedef struct {
 } CFG;
 
 // --- CFG FUNCTIONS ---
-// Load default values for each configuration section
+// Load default values for each section
 void LoadTimingDefaults(TIMING_CFG* timing);
 void LoadAreaDefaults(AREA_CFG* area);
 void LoadFrogDefaults(FROG_CFG* frog);
@@ -67,7 +68,7 @@ void LoadCfgDefaults(CFG* cfg);
 
 // Utilities for handling shapes
 void FreeShape(char** shape, int height);
-void ReadShape(FILE* file, char*** shape, int width, int height);
+void ReadShapeFromFile(FILE* file, char*** shape, int width, int height);
 
 // Load configuration from file for each section
 void LoadTimingFromFile(TIMING_CFG* timing, FILE* file);

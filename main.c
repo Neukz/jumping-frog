@@ -89,7 +89,7 @@ int RandInt(int min, int max)
 }
 
 
-// --- WINDOW FUNCTIONS ---
+// --- MAIN WINDOW FUNCTIONS ---
 // Main window initializer
 WINDOW* InitGame()
 {
@@ -116,7 +116,7 @@ WINDOW* InitGame()
 // Welcome screen - wait for user input before starting the game
 void Welcome(WINDOW* win)
 {
-    mvwaddstr(win, 1, 1, "Press any key to start the game.");
+    mvwprintw(win, 1, 1, "Press any key to start the game.");
     wgetch(win);
     wclear(win);
     wrefresh(win);
@@ -343,8 +343,6 @@ OBJ* InitDest(WIN* win, Color color)
     dest->y = 1;
     dest->width = 1;    // destination is a single point
     dest->height = 1;
-    dest->width = 1;
-    dest->height = 1;
     dest->shape = (char**)malloc(sizeof(char*));
     dest->shape[0] = (char*)malloc((dest->width + 1) * sizeof(char));
     strcpy(dest->shape[0], "*");
@@ -460,7 +458,7 @@ void PrintLanes(WIN* win, CARS_CFG* cfg, int frogHeight)
 
 
 // --- TIMER FUNCTIONS ---
-// TIMER initializer
+// Timer initializer
 TIMER* InitTimer(TIMING_CFG* cfg)
 {
     TIMER* timer = (TIMER*)malloc(sizeof(TIMER));
@@ -504,6 +502,10 @@ GameResult Play(WIN* playable, WIN* status, OBJ* frog, CAR** cars, OBJ* dest, TI
         {
             if (cars[i] != NULL)
             {
+                if (cars[i]->dynamicSpeed && timer->frameNo % cfg->timing->carSpeedChangeFactor == 0)
+                {
+                    cars[i]->obj->moveFactor = RandInt(cfg->cars->minMoveFactor, cfg->cars->maxMoveFactor);
+                }
                 MoveCar(&cars[i], timer->frameNo);
             }
             else if (timer->frameNo % cfg->timing->carSpawnFactor == 0)
