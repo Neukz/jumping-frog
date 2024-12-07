@@ -32,6 +32,8 @@ typedef struct {
 // Cars
 typedef struct {
     int nCars;
+    int nNeutralCars;
+    int neutralCarStopThreshold;
     int minMoveFactor;
     int maxMoveFactor;
     int width;

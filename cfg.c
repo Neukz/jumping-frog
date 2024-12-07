@@ -26,6 +26,8 @@ const int FROG_HEIGHT = 3;
 
 // Cars
 const int N_CARS = 5;
+const int N_NEUTRAL_CARS = 1;
+const int NEUTRAL_CAR_STOP_THRESHOLD = 8;
 const int CAR_MIN_MOVE_FACTOR = 2;
 const int CAR_MAX_MOVE_FACTOR = 4;
 const int CAR_WIDTH = 8;
@@ -75,6 +77,8 @@ void LoadFrogDefaults(FROG_CFG* frog)
 void LoadCarsDefaults(CARS_CFG* cars)
 {
     cars->nCars = N_CARS;
+    cars->nNeutralCars = N_NEUTRAL_CARS;
+    cars->neutralCarStopThreshold = NEUTRAL_CAR_STOP_THRESHOLD;
     cars->minMoveFactor = CAR_MIN_MOVE_FACTOR;
     cars->maxMoveFactor = CAR_MAX_MOVE_FACTOR;
     cars->width = CAR_WIDTH;
@@ -181,6 +185,8 @@ void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
 {
     FreeShape(cars->shape, cars->height);
     fscanf(file, "N_CARS=%d\n", &cars->nCars);
+    fscanf(file, "N_NEUTRAL_CARS=%d\n", &cars->nNeutralCars);
+    fscanf(file, "NEUTRAL_CAR_STOP_THRESHOLD=%d\n", &cars->neutralCarStopThreshold);
     fscanf(file, "CAR_MIN_MOVE_FACTOR=%d\n", &cars->minMoveFactor);
     fscanf(file, "CAR_MAX_MOVE_FACTOR=%d\n", &cars->maxMoveFactor);
     fscanf(file, "CAR_WIDTH=%d\n", &cars->width);
