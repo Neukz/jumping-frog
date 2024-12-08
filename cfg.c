@@ -4,6 +4,8 @@
 #include <string.h>
 #include "cfg.h"
 
+#define CONFIG_FILE "settings.txt"
+
 // --- DEFAULT SETTINGS ---
 // Timing
 const int FRAME_TIME = 25;      // milliseconds interval between frames
@@ -67,9 +69,9 @@ void LoadFrogDefaults(CFG* cfg)
     cfg->frogMoveFactor = FROG_MOVE_FACTOR;
     cfg->frogWidth = FROG_WIDTH;
     cfg->frogHeight = FROG_HEIGHT;
-    cfg->frogShape = malloc(cfg->frogHeight * sizeof(char*));
+    cfg->frogShape = (char**)malloc(cfg->frogHeight * sizeof(char*));
     for (int i = 0; i < cfg->frogHeight; i++) {
-        cfg->frogShape[i] = malloc((cfg->frogWidth + 1) * sizeof(char));
+        cfg->frogShape[i] = (char*)malloc((cfg->frogWidth + 1) * sizeof(char));
     }
     strcpy(cfg->frogShape[0], " @..@ ");
     strcpy(cfg->frogShape[1], "(----)");
@@ -86,9 +88,9 @@ void LoadCarsDefaults(CFG* cfg)
     cfg->carMaxMoveFactor = CAR_MAX_MOVE_FACTOR;
     cfg->carWidth = CAR_WIDTH;
     cfg->carHeight = CAR_HEIGHT;
-    cfg->carShape = malloc(cfg->carHeight * sizeof(char*));
+    cfg->carShape = (char**)malloc(cfg->carHeight * sizeof(char*));
     for (int i = 0; i < cfg->carHeight; i++) {
-        cfg->carShape[i] = malloc((cfg->carWidth + 1) * sizeof(char));
+        cfg->carShape[i] = (char*)malloc((cfg->carWidth + 1) * sizeof(char));
     }
     strcpy(cfg->carShape[0], "  ____  ");
     strcpy(cfg->carShape[1], "_/____\\_");
@@ -105,7 +107,6 @@ void LoadControlsDefaults(CFG* cfg)
     cfg->quit = QUIT;
 }
 
-// Load default configuration
 void LoadCfgDefaults(CFG* cfg)
 {
     LoadTimingDefaults(cfg);
@@ -125,9 +126,9 @@ void FreeShape(char** shape, int height) {
 }
 
 void ReadShapeFromFile(FILE* file, char*** shape, int width, int height) {
-    *shape = malloc(height * sizeof(char*)); // allocate with new height and width
+    *shape = (char**)malloc(height * sizeof(char*)); // allocate with new height and width
     for (int i = 0; i < height; i++) {
-        (*shape)[i] = malloc((width + 1) * sizeof(char));
+        (*shape)[i] = (char*)malloc((width + 1) * sizeof(char));
     }
 
     int ch;
@@ -202,8 +203,8 @@ void LoadControlsFromFile(CFG* cfg, FILE* file)
 }
 
 // Load config from file and override default values
-void LoadCfgFromFile(CFG* cfg, const char* filename) {
-    FILE* file = fopen(filename, "r");
+void LoadCfgFromFile(CFG* cfg) {
+    FILE* file = fopen(CONFIG_FILE, "r");
     if (!file) {
         return; // file not found
     }
@@ -231,12 +232,10 @@ void LoadCfgFromFile(CFG* cfg, const char* filename) {
     fclose(file);
 }
 
-// Config initializer
 CFG* InitCfg()
 {
-    const char* filename = "settings.txt";  // default config file
     CFG* cfg = (CFG*)malloc(sizeof(CFG));
     LoadCfgDefaults(cfg);
-    LoadCfgFromFile(cfg, filename);
+    LoadCfgFromFile(cfg);
     return cfg;
 }

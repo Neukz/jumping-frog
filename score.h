@@ -4,7 +4,6 @@
 
 #include "cfg.h"
 
-// Score structure
 typedef struct {
     float highest;
     float last;

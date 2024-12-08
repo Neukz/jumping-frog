@@ -38,14 +38,15 @@ typedef enum {
 // Color identifiers
 typedef enum {
     COLOR_MAIN,
-    COLOR_STATUS,
     COLOR_PLAYABLE,
+    COLOR_STATUS,
     COLOR_FROG,
     COLOR_ENEMY_CAR,
     COLOR_NEUTRAL_CAR,
     COLOR_FRIENDLY_CAR,
     COLOR_DEST,
     COLOR_OBSTACLE,
+    COLOR_STORK
 } Color;
 
 
@@ -122,7 +123,7 @@ WINDOW* InitGame()
     }
 
     start_color();
-    init_pair(COLOR_MAIN, COLOR_WHITE, COLOR_BLACK);
+    init_pair(COLOR_MAIN, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_PLAYABLE, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_STATUS, COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_FROG, COLOR_GREEN, COLOR_WHITE);
@@ -130,7 +131,8 @@ WINDOW* InitGame()
     init_pair(COLOR_NEUTRAL_CAR, COLOR_YELLOW, COLOR_WHITE);
     init_pair(COLOR_FRIENDLY_CAR, COLOR_BLUE, COLOR_WHITE);
     init_pair(COLOR_DEST, COLOR_GREEN, COLOR_WHITE);
-    init_pair(COLOR_OBSTACLE, COLOR_MAGENTA, COLOR_WHITE);
+    init_pair(COLOR_OBSTACLE, COLOR_CYAN, COLOR_WHITE);
+    init_pair(COLOR_STORK, COLOR_MAGENTA, COLOR_WHITE);
 
     noecho();       // turn off displaying input and hide cursor
     curs_set(0);
@@ -373,13 +375,36 @@ OBJ* InitObstacle(WIN* win, int x, int y, int width, int height, Color color) {
 OBJ** GenerateObstacles(WIN* win, CFG* cfg, Color color) {
     OBJ** obstacles = (OBJ**)malloc(cfg->nCars * sizeof(OBJ*));
     for (int i = 0; i < cfg->nCars; i++) {
-        int x = RandInt(1, win->cols - cfg->carWidth - 1);  // random x-coordinate with respect to the width
+        int width = RandInt(win->cols / 5, win->cols / 3);  // random width
+        int x = RandInt(1, win->cols - width - 1);          //random x-coordinate with respect to the width
         int y = CarY(i, cfg->carHeight, cfg->frogHeight) + cfg->carHeight + 1;      // obstacles are below each car lane
-        obstacles[i] = InitObstacle(win, x, y, cfg->carWidth, 1, color);            // height=1 (single row)
-        // TODO: randomize obstacle width/create walls with random gaps/add vertical walls on car lanes
+        obstacles[i] = InitObstacle(win, x, y, width, 1, color);            // height=1 (single row)
     }
     return obstacles;
 }
+
+// OBJ* InitStork(WIN* win, Color color)
+// {
+//     OBJ* stork = (OBJ*)malloc(sizeof(OBJ));
+//     stork->win = win;
+//     stork->color = color;
+//     stork->moveFactor = 30;
+//     stork->width = 5;
+//     stork->height = 2;
+//     stork->x = RandInt(0, 1) ? 1 : win->cols - stork->width - 1;  // randomly in the top left or right corner
+//     stork->y = 1;
+//     stork->xmin = 1;
+//     stork->xmax = win->cols - 1;
+//     stork->ymin = 1;
+//     stork->ymax = win->rows - 1;
+//     stork->shape = (char**)malloc(stork->height * sizeof(char*));
+//     for (int i = 0; i < stork->height; i++) {
+//         stork->shape[i] = (char*)malloc((stork->width + 1) * sizeof(char));
+//     }
+//     strcpy(stork->shape[0], " <o\\ ");
+//     strcpy(stork->shape[1], ">-O-<");
+//     return stork;
+// }
 
 
 // --- CAR FUNCTIONS ---
@@ -650,9 +675,40 @@ void UpdateCars(WIN* playable, TIMER* timer, OBJ* frog, CAR** cars, OBJ** obstac
     }
 }
 
+// void MoveStork(OBJ* stork, OBJ* frog, int frame)
+// {
+//     ClearShape(stork);
+//     if (frame % stork->moveFactor == 0)
+//     {
+//         int distanceX = frog->x - stork->x;
+//         int distanceY = frog->y - stork->y;
+//         int dx = 0, dy = 0;
+//         if (distanceX > 0)
+//         {
+//             dx = 1;
+//         }
+//         else if (distanceX < 0)
+//         {
+//             dx = -1;
+//         }
+
+//         if (distanceY > 0)
+//         {
+//             dy = 1;
+//         }
+//         else if (distanceY < 0)
+//         {
+//             dy = -1;
+//         }
+
+//         MoveObj(stork, dx, dy);
+//     }
+//     PrintObj(stork);
+// }
+
 
 // --- MAIN LOOP ---
-GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars, OBJ* dest, OBJ** obstacles, CFG* cfg)
+GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars, OBJ* dest, OBJ** obstacles, /*OBJ* stork,*/ CFG* cfg)
 {
     PrintObj(dest);
     int key;
@@ -666,6 +722,7 @@ GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars,
         UpdateCars(playable, timer, frog, cars, obstacles, cfg);
         PrintLanes(playable, cfg);
         PrintObj(frog);  // force overlapping car lanes
+        // MoveStork(stork, frog, timer->frame);
         PrintJumps(status, frog);
         if (Collision(frog, dest))
         {
@@ -740,10 +797,11 @@ int main()
     CAR** cars = GenerateCars(playable, cfg, COLOR_ENEMY_CAR, COLOR_NEUTRAL_CAR, COLOR_FRIENDLY_CAR);
     OBJ* dest = InitDest(playable, COLOR_DEST);
     OBJ** obstacles = GenerateObstacles(playable, cfg, COLOR_OBSTACLE);
+    // OBJ* stork = InitStork(playable, COLOR_STORK);
 
     InitStatus(status, timer, frog);
 
-    GameResult result = Play(playable, status, timer, frog, cars, dest, obstacles, cfg);
+    GameResult result = Play(playable, status, timer, frog, cars, dest, obstacles, /*stork,*/ cfg);
     EndGame(playable, status, result, cfg, frog->nMoves, timer->timeLeft);
     Cleanup(playable, status, mainWindow, frog, cars, dest, obstacles, timer, cfg);
     return EXIT_SUCCESS;

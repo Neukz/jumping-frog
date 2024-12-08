@@ -63,7 +63,7 @@ void LoadAreaFromFile(CFG* cfg, FILE* file);
 void LoadFrogFromFile(CFG* cfg, FILE* file);
 void LoadCarsFromFile(CFG* cfg, FILE* file);
 void LoadControlsFromFile(CFG* cfg, FILE* file);
-void LoadCfgFromFile(CFG* cfg, const char* filename);
+void LoadCfgFromFile(CFG* cfg);
 CFG* InitCfg();
 
 #endif // CFG_H

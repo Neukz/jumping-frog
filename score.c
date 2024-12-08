@@ -3,20 +3,20 @@
 #include <stdlib.h>
 #include "score.h"
 
+#define SCORE_FILE "score.txt"
+
 // Scoring weights - should sum up to 100
 const float TIME_FACTOR = 50;
 const float JUMP_FACTOR = 15;
 const float DIFFICULTY_FACTOR = 35;
 
-
 // --- SCORE FUNCTIONS ---
 void ReadScore(SCORE* score)
 {
-    const char* filename = "score.txt";
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(SCORE_FILE, "r");
     if (file == NULL)
     {
-        file = fopen(filename, "w+");   // create the file if it doesn't exist
+        file = fopen(SCORE_FILE, "w+");   // create the file if it doesn't exist
         if (file == NULL)
         {
             fprintf(stderr, "Error creating the score file.\n");
@@ -44,8 +44,7 @@ void SaveScore(float newScore)
         score->highest = newScore;
     }
 
-    const char* filename = "score.txt";
-    FILE* file = fopen(filename, "w");
+    FILE* file = fopen(SCORE_FILE, "w");
     if (file == NULL)
     {
         fprintf(stderr, "Error saving the score.\n");
