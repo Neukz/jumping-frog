@@ -36,6 +36,11 @@ const int CAR_MAX_MOVE_FACTOR = 4;
 const int CAR_WIDTH = 8;
 const int CAR_HEIGHT = 3;
 
+// Stork
+const int STORK_MOVE_FACTOR = 25;
+const int STORK_WIDTH = 5;
+const int STORK_HEIGHT = 2;
+
 // Controls
 const int UP = 'w';
 const int DOWN = 's';
@@ -99,6 +104,20 @@ void LoadCarsDefaults(CFG* cfg)
     strcpy(cfg->carShape[2], " O    O ");
 }
 
+void LoadStorkDefaults(CFG* cfg)
+{
+    cfg->storkMoveFactor = STORK_MOVE_FACTOR;
+    cfg->storkWidth = STORK_WIDTH;
+    cfg->storkHeight = STORK_HEIGHT;
+    cfg->storkShape = (char**)malloc(cfg->storkHeight * sizeof(char*));
+    for (int i = 0; i < cfg->storkHeight; i++)
+    {
+        cfg->storkShape[i] = (char*)malloc((cfg->storkWidth + 1) * sizeof(char));
+    }
+    strcpy(cfg->storkShape[0], " <o\\ ");
+    strcpy(cfg->storkShape[1], ">-O-<");
+}
+
 void LoadControlsDefaults(CFG* cfg)
 {
     cfg->up = UP;
@@ -115,6 +134,7 @@ void LoadCfgDefaults(CFG* cfg)
     LoadAreaDefaults(cfg);
     LoadFrogDefaults(cfg);
     LoadCarsDefaults(cfg);
+    LoadStorkDefaults(cfg);
     LoadControlsDefaults(cfg);
 }
 

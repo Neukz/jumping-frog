@@ -35,6 +35,12 @@ typedef struct {
     int carHeight;
     char** carShape;
 
+    // Stork
+    int storkMoveFactor;
+    int storkWidth;
+    int storkHeight;
+    char** storkShape;
+
     // Controls
     char up;
     char down;
@@ -50,6 +56,7 @@ void LoadTimingDefaults(CFG* cfg);
 void LoadAreaDefaults(CFG* cfg);
 void LoadFrogDefaults(CFG* cfg);
 void LoadCarsDefaults(CFG* cfg);
+void LoadStorkDefaults(CFG* cfg);
 void LoadControlsDefaults(CFG* cfg);
 void LoadCfgDefaults(CFG* cfg);
 

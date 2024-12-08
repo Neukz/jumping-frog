@@ -365,27 +365,21 @@ OBJ** GenerateObstacles(WIN* win, CFG* cfg, Color color)
     return obstacles;
 }
 
-OBJ* InitStork(WIN* win, Color color)
+OBJ* InitStork(WIN* win, CFG* cfg, Color color)
 {
     OBJ* stork = (OBJ*)malloc(sizeof(OBJ));
     stork->win = win;
     stork->color = color;
-    stork->moveFactor = 25;
-    stork->width = 5;
-    stork->height = 2;
+    stork->moveFactor = cfg->storkMoveFactor;
+    stork->width = cfg->storkWidth;
+    stork->height = cfg->storkHeight;
     stork->x = RandInt(0, 1) ? 1 : (win->cols - stork->width - 1);  // randomly in the top left or right corner
     stork->y = 1;
     stork->xmin = 1;
     stork->xmax = win->cols - 1;
     stork->ymin = 1;
     stork->ymax = win->rows - 1;
-    stork->shape = (char**)malloc(stork->height * sizeof(char*));
-    for (int i = 0; i < stork->height; i++)
-    {
-        stork->shape[i] = (char*)malloc((stork->width + 1) * sizeof(char));
-    }
-    strcpy(stork->shape[0], " <o\\ ");
-    strcpy(stork->shape[1], ">-O-<");
+    AllocateShape(stork, cfg->storkShape, cfg->storkHeight, cfg->storkWidth);
     return stork;
 }
 
@@ -766,6 +760,7 @@ void Cleanup(WIN* playable, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** ca
     free(timer);
     FreeShape(cfg->frogShape, cfg->frogHeight);
     FreeShape(cfg->carShape, cfg->carHeight);
+    FreeShape(cfg->storkShape, cfg->storkHeight);
     free(cfg);
     delwin(playable->window);
     free(playable);
@@ -793,7 +788,7 @@ int main()
     CAR** cars = GenerateCars(playable, cfg, COLOR_ENEMY_CAR, COLOR_NEUTRAL_CAR, COLOR_FRIENDLY_CAR);
     OBJ* dest = InitDest(playable, COLOR_DEST);
     OBJ** obstacles = GenerateObstacles(playable, cfg, COLOR_OBSTACLE);
-    OBJ* stork = InitStork(playable, COLOR_STORK);
+    OBJ* stork = InitStork(playable, cfg, COLOR_STORK);
 
     InitStatus(status, timer, frog);
 
