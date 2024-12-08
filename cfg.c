@@ -27,6 +27,7 @@ const int FROG_HEIGHT = 3;
 // Cars
 const int N_CARS = 5;
 const int N_NEUTRAL_CARS = 1;
+const int N_FRIENDLY_CARS = 1;
 const int NEUTRAL_CAR_STOP_THRESHOLD = 8;
 const int CAR_MIN_MOVE_FACTOR = 2;
 const int CAR_MAX_MOVE_FACTOR = 4;
@@ -38,6 +39,7 @@ const int UP = 'w';
 const int DOWN = 's';
 const int LEFT = 'a';
 const int RIGHT = 'd';
+const int REQUEST = 'e';
 const int QUIT = 'q';
 
 
@@ -79,6 +81,7 @@ void LoadCarsDefaults(CARS_CFG* cars)
     cars->nCars = N_CARS;
     cars->nNeutralCars = N_NEUTRAL_CARS;
     cars->neutralCarStopThreshold = NEUTRAL_CAR_STOP_THRESHOLD;
+    cars->nFriendlyCars = N_FRIENDLY_CARS;
     cars->minMoveFactor = CAR_MIN_MOVE_FACTOR;
     cars->maxMoveFactor = CAR_MAX_MOVE_FACTOR;
     cars->width = CAR_WIDTH;
@@ -98,6 +101,7 @@ void LoadControlsDefaults(CONTROLS_CFG* controls)
     controls->down = DOWN;
     controls->left = LEFT;
     controls->right = RIGHT;
+    controls->request = REQUEST;
     controls->quit = QUIT;
 }
 
@@ -186,6 +190,7 @@ void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
     FreeShape(cars->shape, cars->height);
     fscanf(file, "N_CARS=%d\n", &cars->nCars);
     fscanf(file, "N_NEUTRAL_CARS=%d\n", &cars->nNeutralCars);
+    fscanf(file, "N_FRIENDLY_CARS=%d\n", &cars->nFriendlyCars);
     fscanf(file, "NEUTRAL_CAR_STOP_THRESHOLD=%d\n", &cars->neutralCarStopThreshold);
     fscanf(file, "CAR_MIN_MOVE_FACTOR=%d\n", &cars->minMoveFactor);
     fscanf(file, "CAR_MAX_MOVE_FACTOR=%d\n", &cars->maxMoveFactor);
@@ -197,11 +202,12 @@ void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
 
 void LoadControlsFromFile(CONTROLS_CFG* controls, FILE* file)
 {
-    fscanf(file, "UP=%d\n", &controls->up);
-    fscanf(file, "DOWN=%d\n", &controls->down);
-    fscanf(file, "LEFT=%d\n", &controls->left);
-    fscanf(file, "RIGHT=%d\n", &controls->right);
-    fscanf(file, "QUIT=%d\n", &controls->quit);
+    fscanf(file, "UP=%c\n", &controls->up);
+    fscanf(file, "DOWN=%c\n", &controls->down);
+    fscanf(file, "LEFT=%c\n", &controls->left);
+    fscanf(file, "RIGHT=%c\n", &controls->right);
+    fscanf(file, "REQUEST=%c\n", &controls->request);
+    fscanf(file, "QUIT=%c\n", &controls->quit);
 }
 
 // Load config from file and override default values

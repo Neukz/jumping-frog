@@ -33,6 +33,7 @@ typedef struct {
 typedef struct {
     int nCars;
     int nNeutralCars;
+    int nFriendlyCars;
     int neutralCarStopThreshold;
     int minMoveFactor;
     int maxMoveFactor;
@@ -43,11 +44,12 @@ typedef struct {
 
 // Controls
 typedef struct {
-    int up;
-    int down;
-    int left;
-    int right;
-    int quit;
+    char up;
+    char down;
+    char left;
+    char right;
+    char request;
+    char quit;
 } CONTROLS_CFG;
 
 // Config structure - encapsulates all settings
