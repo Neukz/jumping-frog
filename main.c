@@ -47,6 +47,10 @@ typedef enum {
     COLOR_OBSTACLE,
 } Color;
 
+// Scoring constants - should sum up to 100
+const float TIME_FACTOR = 50;
+const float JUMP_FACTOR = 15;
+const float DIFFICULTY_FACTOR = 35;
 
 // --- DATA STRUCTURES ---
 // Window structure
@@ -62,6 +66,7 @@ typedef struct {
     WIN* win;
     Color color;
     int moveFactor;
+    int nMoves;          // number of nMoves (used to track number of jumps)
     int x, y;           // top-left corner coordinates
     int xmin, xmax;     // movement boundaries
     int ymin, ymax;
@@ -86,6 +91,12 @@ typedef struct {
     float timeLeft;
 } TIMER;
 
+// Score structure
+typedef struct {
+    float highest;
+    float last;
+} SCORE;
+
 
 // --- UTILITIES ---
 // Random integer (inclusive)
@@ -108,6 +119,66 @@ int ShapeCenter(int coord, int size)
 int EuclideanDistance(int x1, int y1, int x2, int y2)
 {
     return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+}
+
+
+// --- SCORE FUNCTIONS ---
+float Score(int nJumps, float timeLeft, float initialTime, CARS_CFG* cfg)
+{
+    float timeScore = (timeLeft / initialTime) * TIME_FACTOR;    // more time left yields higher scores
+    float jumpScore = (1.0 / nJumps) * JUMP_FACTOR;              // fewer jumps yield higher scores
+    int enemyCars = cfg->nCars - cfg->nNeutralCars - cfg->nFriendlyCars;
+    float difficultyScore = (float)enemyCars / (cfg->nCars) * DIFFICULTY_FACTOR;   // more enemy cars increase difficulty
+    float score = timeScore + jumpScore + difficultyScore;
+    return score;
+}
+
+void ReadScore(SCORE* score)
+{
+    const char* filename = "score.txt";
+    FILE* file = fopen(filename, "r");
+    if (file == NULL)
+    {
+        file = fopen(filename, "w+");   // create the file if it doesn't exist
+        if (file == NULL)
+        {
+            fprintf(stderr, "Error creating the score file.\n");
+            return;
+        }
+
+        fprintf(file, "HIGHEST_SCORE=0.00\n");
+        fprintf(file, "LAST_SCORE=0.00\n");
+        rewind(file);
+    }
+
+    fscanf(file, "HIGHEST_SCORE=%f\n", &score->highest);
+    fscanf(file, "LAST_SCORE=%f\n", &score->last);
+    fclose(file);
+}
+
+void SaveScore(float newScore)
+{
+    SCORE* score = (SCORE*)malloc(sizeof(SCORE));
+    ReadScore(score);
+
+    score->last = newScore;
+    if (newScore > score->highest)
+    {
+        score->highest = newScore;
+    }
+
+    const char* filename = "score.txt";
+    FILE* file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error saving the score.\n");
+        return;
+    }
+
+    fprintf(file, "HIGHEST_SCORE=%.2f\n", score->highest);
+    fprintf(file, "LAST_SCORE=%.2f\n", score->last);
+    free(score);
+    fclose(file);
 }
 
 
@@ -141,10 +212,16 @@ WINDOW* InitGame()
 // Welcome screen - wait for user input before starting the game
 void Welcome(WINDOW* win)
 {
-    mvwprintw(win, 1, 1, "Press any key to start the game.");
+    SCORE* score = (SCORE*)malloc(sizeof(SCORE));
+    ReadScore(score);
+    mvwprintw(win, 1, 1, "Jumping Frog");
+    mvwprintw(win, 3, 1, "Highest score: %.2f", score->highest);
+    mvwprintw(win, 4, 1, "Last score: %.2f", score->last);
+    mvwprintw(win, 6, 1, "Press any key to start the game.");
     wgetch(win);
     wclear(win);
     wrefresh(win);
+    free(score);
 }
 
 
@@ -186,9 +263,9 @@ void PrintTime(WIN* status, float timeLeft)
     wrefresh(status->window);
 }
 
-void PrintPosition(WIN* status, OBJ* frog)
+void PrintJumps(WIN* status, OBJ* frog)
 {
-    mvwprintw(status->window, 1, status->cols / 2 - 10, "Position: x: %d y: %d", frog->x, frog->y);
+    mvwprintw(status->window, 1, status->cols / 2 - 10, "Jumps: %d", frog->nMoves);
     wrefresh(status->window);
 }
 
@@ -197,20 +274,22 @@ void InitStatus(WIN* status, TIMER* timer, OBJ* frog)
 {
     box(status->window, 0, 0);
     PrintTime(status, timer->timeLeft);
-    PrintPosition(status, frog);
+    PrintJumps(status, frog);
     const char* signature = "Kacper Neumann, 203394";
     mvwprintw(status->window, 1, status->cols - strlen(signature) - 2, "%s", signature);
 }
 
 // Display information about the result of the game and count down to quit
-void EndGame(WIN* status, GameResult result, int quitTime)
+void EndGame(WIN* playable, WIN* status, GameResult result, CFG* cfg, int nJumps, float timeLeft)
 {
     ClearWin(status);
     char message[100];
     switch (result)
     {
         case SUCCESS:
-            sprintf(message, "Congratulations! You have reached the destination.");
+            float score = Score(nJumps, timeLeft, cfg->timing->initialTime, cfg->cars);
+            SaveScore(score);
+            sprintf(message, "You have reached the destination. Score: %.2f", score);
             break;
         case FAILURE:
             sprintf(message, "You died. Game over.");
@@ -221,9 +300,9 @@ void EndGame(WIN* status, GameResult result, int quitTime)
         case INTERRUPTED:
             sprintf(message, "You have decided to quit the game.");
     }
-    for (int seconds = quitTime; seconds > 0; seconds--)
+    for (int seconds = cfg->timing->quitTime; seconds > 0; seconds--)
     {
-        mvwprintw(status->window, 1, 2, "%s Closing the game in %d seconds...", message, seconds);
+        mvwprintw(status->window, 1, 2, "%s Closing in %d seconds...", message, seconds);
         wrefresh(status->window);
         sleep(1);
     }
@@ -321,6 +400,7 @@ OBJ* InitFrog(WIN* win, FROG_CFG* cfg, Color color)
     frog->win = win;
     frog->color = color;
     frog->moveFactor = 0;
+    frog->nMoves = 0;
     frog->width = cfg->width;
     frog->height = cfg->height;
     frog->x = (win->cols - frog->width) / 2;
@@ -587,6 +667,7 @@ void MoveFrog(OBJ* frog, CONTROLS_CFG* controlsCfg, char key, int moveFactor, in
         }
 
         frog->moveFactor = frame;
+        frog->nMoves++;
     }
 }
 
@@ -667,7 +748,7 @@ GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars,
         UpdateCars(playable, timer, frog, cars, obstacles, cfg);
         PrintLanes(playable, cfg->cars, cfg->frog->height);
         PrintObj(frog);  // force overlapping car lanes
-        PrintPosition(status, frog);
+        PrintJumps(status, frog);
         if (Collision(frog, dest))
         {
             return SUCCESS;
@@ -689,29 +770,43 @@ GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars,
 
 
 // --- CLEANUP ---
-void Cleanup(WIN* playable, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** cars, OBJ* dest, TIMER* timer)
+void Cleanup(WIN* playable, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** cars, OBJ* dest, OBJ** obstacles, TIMER* timer, CFG* cfg)
 {
-    delwin(playable->window);   // TODO: include more cleanup
-    free(playable);
-    delwin(status->window);
-    free(status);
-    delwin(mainWindow);
-    free(frog->shape);
+    FreeShape(frog->shape, frog->height);
     free(frog);
-    for (int i = 0; i < sizeof(cars) / sizeof(CAR*); i++)
+    for (int i = 0; i < cfg->cars->nCars; i++)
     {
         if (cars[i] != NULL)    // watch out for disappearing cars
         {
-            free(cars[i]->obj->shape);
+            FreeShape(cars[i]->obj->shape, cars[i]->obj->height);
             free(cars[i]->obj);
             free(cars[i]);
         }
     }
     free(cars);
+    FreeShape(dest->shape, dest->height);
     free(dest);
+    for (int i = 0; i < cfg->cars->nCars; i++)
+    {
+        FreeShape(obstacles[i]->shape, obstacles[i]->height);
+        free(obstacles[i]);
+    }
     free(timer);
-    endwin();
+    free(cfg->timing);
+    free(cfg->area);
+    FreeShape(cfg->frog->shape, cfg->frog->height);
+    free(cfg->frog);
+    FreeShape(cfg->cars->shape, cfg->cars->height);
+    free(cfg->cars);
+    free(cfg->controls);
+    free(cfg);
+    delwin(playable->window);
+    free(playable);
+    delwin(status->window);
+    free(status);
+    delwin(mainWindow);
     refresh();
+    endwin();
 }
 
 
@@ -735,7 +830,7 @@ int main()
     InitStatus(status, timer, frog);
 
     GameResult result = Play(playable, status, timer, frog, cars, dest, obstacles, cfg);
-    EndGame(status, result, cfg->timing->quitTime);
-    Cleanup(playable, status, mainWindow, frog, cars, dest, timer);
+    EndGame(playable, status, result, cfg, frog->nMoves, timer->timeLeft);
+    Cleanup(playable, status, mainWindow, frog, cars, dest, obstacles, timer, cfg);
     return EXIT_SUCCESS;
 }
