@@ -284,9 +284,8 @@ void MoveObj(OBJ* obj, int dx, int dy)
             mvwprintw(obj->win->window, obj->y + i, obj->x + obj->width, " ");
         }
     }
-    free(emptyRow);
-
     PrintObj(obj);
+    free(emptyRow);
 }
 
 int Collision(OBJ* obj, OBJ* other)
@@ -355,7 +354,8 @@ OBJ* InitDest(WIN* win, Color color)
     return dest;
 }
 
-OBJ* InitObstacle(WIN* win, int x, int y, int width, int height, Color color) {
+OBJ* InitObstacle(WIN* win, int x, int y, int width, int height, Color color)
+{
     OBJ* obstacle = (OBJ*)malloc(sizeof(OBJ));
     obstacle->win = win;
     obstacle->color = color;
@@ -372,9 +372,11 @@ OBJ* InitObstacle(WIN* win, int x, int y, int width, int height, Color color) {
     return obstacle;
 }
 
-OBJ** GenerateObstacles(WIN* win, CFG* cfg, Color color) {
+OBJ** GenerateObstacles(WIN* win, CFG* cfg, Color color)
+{
     OBJ** obstacles = (OBJ**)malloc(cfg->nCars * sizeof(OBJ*));
-    for (int i = 0; i < cfg->nCars; i++) {
+    for (int i = 0; i < cfg->nCars; i++)
+    {
         int width = RandInt(win->cols / 5, win->cols / 3);  // random width
         int x = RandInt(1, win->cols - width - 1);          //random x-coordinate with respect to the width
         int y = CarY(i, cfg->carHeight, cfg->frogHeight) + cfg->carHeight + 1;      // obstacles are below each car lane
@@ -549,13 +551,22 @@ int UpdateTimer(TIMER* timer, WIN* win, int initialTime)
 
 
 // --- FROG & CAR MOVEMENT + INTERACTION ---
-void RequestFriendlyCar(OBJ* frog, CAR** cars, CFG* cfg)
+void RequestFriendlyCar(OBJ* frog, CAR** cars, OBJ** obstacles, CFG* cfg)
 {
     for (int i = cfg->nCars - 1; i >= 0; i--)    // find the closest friendly car above the frog
     {
         // the frog's y-coordinate must by at the car lane
         if (cars[i] != NULL && cars[i]->type == FRIENDLY && cars[i]->obj->y + cars[i]->obj->height == frog->y)
         {
+            int frogY = frog->y;
+            frog->y = cars[i]->obj->y - frog->height;   // simulate frog's move above the friendly car
+            int willCollide = Collision(frog, obstacles[i - 1]);    // check for potential collision with an obstacle above
+            frog->y = frogY;    // undo the move
+            if (willCollide)
+            {
+                return;
+            }
+
             if (cars[i]->obj->x < frog->x)
             {
                 cars[i]->direction = 1;
@@ -564,7 +575,7 @@ void RequestFriendlyCar(OBJ* frog, CAR** cars, CFG* cfg)
             {
                 cars[i]->direction = 0;
             }
-            cars[i]->obj->moveFactor = cfg->carMinMoveFactor;
+            cars[i]->obj->moveFactor = cfg->carMinMoveFactor;   // move the car with max speed
             cars[i]->requested = 1;
             return;
         }
@@ -594,7 +605,7 @@ void MoveFrog(OBJ* frog, CFG* cfg, char key, int moveFactor, int frame, OBJ** ob
         }
         else if (key == cfg->request)
         {
-            RequestFriendlyCar(frog, cars, cfg);
+            RequestFriendlyCar(frog, cars, obstacles, cfg);
         }
 
         MoveObj(frog, dx, dy);
