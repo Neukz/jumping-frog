@@ -59,12 +59,12 @@ typedef struct {
     int rows, cols;
 } WIN;
 
-// Game object structure - used for frog and destination directly, extended by CAR
+// Game object structure - used for frog, destination obstacles and stork directly, extended by CAR
 typedef struct {
     WIN* win;
     Color color;
     int moveFactor;
-    int nMoves;         // number of nMoves (used to track number of jumps)
+    int nMoves;         // number of moves (used to track number of jumps)
     int x, y;
     int xmin, xmax;     // movement boundaries
     int ymin, ymax;
@@ -250,55 +250,6 @@ void PrintObj(OBJ* obj)
     wrefresh(obj->win->window);
 }
 
-void MoveObj(OBJ* obj, int dx, int dy)
-{
-    wattron(obj->win->window, COLOR_PAIR(obj->color));
-
-    char* emptyRow = (char*)malloc(obj->width * sizeof(char));    // string of empty spaces to erase the old position row
-    memset(emptyRow, ' ', obj->width);
-
-    if ((dy == 1) && (obj->y + obj->height < obj->ymax))
-    {
-        obj->y += dy;
-        mvwprintw(obj->win->window, obj->y - 1, obj->x, "%s", emptyRow);
-    }
-    else if ((dy == -1) && (obj->y > obj->ymin))
-    {
-        obj->y += dy;
-        mvwprintw(obj->win->window, obj->y + obj->height, obj->x, "%s", emptyRow);
-    }
-
-    if ((dx == 1) && (obj->x + obj->width < obj->xmax))
-    {
-        obj->x += dx;
-        for (int i = 0; i < obj->height; i++)
-        {
-            mvwprintw(obj->win->window, obj->y + i, obj->x - 1, " ");
-        }
-    }
-    else if ((dx == -1) && (obj->x > obj->xmin))
-    {
-        obj->x += dx;
-        for (int i = 0; i < obj->height; i++)
-        {
-            mvwprintw(obj->win->window, obj->y + i, obj->x + obj->width, " ");
-        }
-    }
-    PrintObj(obj);
-    free(emptyRow);
-}
-
-int Collision(OBJ* obj, OBJ* other)
-{
-    return ((
-        (obj->y >= other->y && obj->y < other->y + other->height) ||
-        (other->y >= obj->y && other->y < obj->y + obj->height)
-        ) && (
-            (obj->x >= other->x && obj->x < other->x + other->width) ||
-            (other->x >= obj->x && other->x < obj->x + obj->width)
-            )) ? 1 : 0;
-}
-
 void AllocateShape(OBJ* obj, char** shape, int height, int width)
 {
     obj->shape = (char**)malloc(height * sizeof(char*));
@@ -318,6 +269,35 @@ void ClearShape(OBJ* obj)
             mvwprintw(obj->win->window, obj->y + i, obj->x + j, " ");
         }
     }
+}
+
+void MoveObj(OBJ* obj, int dx, int dy)
+{
+    wattron(obj->win->window, COLOR_PAIR(obj->color));
+    ClearShape(obj);
+
+    if ((dy != 0) && (obj->y + dy >= obj->ymin) && (obj->y + obj->height + dy <= obj->ymax))
+    {
+        obj->y += dy;
+    }
+
+    if ((dx != 0) && (obj->x + dx >= obj->xmin) && (obj->x + obj->width + dx <= obj->xmax))
+    {
+        obj->x += dx;
+    }
+
+    PrintObj(obj);
+}
+
+int Collision(OBJ* obj, OBJ* other)
+{
+    return ((
+        (obj->y >= other->y && obj->y < other->y + other->height) ||
+        (other->y >= obj->y && other->y < obj->y + obj->height)
+        ) && (
+            (obj->x >= other->x && obj->x < other->x + other->width) ||
+            (other->x >= obj->x && other->x < obj->x + obj->width)
+            )) ? 1 : 0;
 }
 
 OBJ* InitFrog(WIN* win, CFG* cfg, Color color)
@@ -385,28 +365,29 @@ OBJ** GenerateObstacles(WIN* win, CFG* cfg, Color color)
     return obstacles;
 }
 
-// OBJ* InitStork(WIN* win, Color color)
-// {
-//     OBJ* stork = (OBJ*)malloc(sizeof(OBJ));
-//     stork->win = win;
-//     stork->color = color;
-//     stork->moveFactor = 30;
-//     stork->width = 5;
-//     stork->height = 2;
-//     stork->x = RandInt(0, 1) ? 1 : win->cols - stork->width - 1;  // randomly in the top left or right corner
-//     stork->y = 1;
-//     stork->xmin = 1;
-//     stork->xmax = win->cols - 1;
-//     stork->ymin = 1;
-//     stork->ymax = win->rows - 1;
-//     stork->shape = (char**)malloc(stork->height * sizeof(char*));
-//     for (int i = 0; i < stork->height; i++) {
-//         stork->shape[i] = (char*)malloc((stork->width + 1) * sizeof(char));
-//     }
-//     strcpy(stork->shape[0], " <o\\ ");
-//     strcpy(stork->shape[1], ">-O-<");
-//     return stork;
-// }
+OBJ* InitStork(WIN* win, Color color)
+{
+    OBJ* stork = (OBJ*)malloc(sizeof(OBJ));
+    stork->win = win;
+    stork->color = color;
+    stork->moveFactor = 25;
+    stork->width = 5;
+    stork->height = 2;
+    stork->x = RandInt(0, 1) ? 1 : (win->cols - stork->width - 1);  // randomly in the top left or right corner
+    stork->y = 1;
+    stork->xmin = 1;
+    stork->xmax = win->cols - 1;
+    stork->ymin = 1;
+    stork->ymax = win->rows - 1;
+    stork->shape = (char**)malloc(stork->height * sizeof(char*));
+    for (int i = 0; i < stork->height; i++)
+    {
+        stork->shape[i] = (char*)malloc((stork->width + 1) * sizeof(char));
+    }
+    strcpy(stork->shape[0], " <o\\ ");
+    strcpy(stork->shape[1], ">-O-<");
+    return stork;
+}
 
 
 // --- CAR FUNCTIONS ---
@@ -686,40 +667,38 @@ void UpdateCars(WIN* playable, TIMER* timer, OBJ* frog, CAR** cars, OBJ** obstac
     }
 }
 
-// void MoveStork(OBJ* stork, OBJ* frog, int frame)
-// {
-//     ClearShape(stork);
-//     if (frame % stork->moveFactor == 0)
-//     {
-//         int distanceX = frog->x - stork->x;
-//         int distanceY = frog->y - stork->y;
-//         int dx = 0, dy = 0;
-//         if (distanceX > 0)
-//         {
-//             dx = 1;
-//         }
-//         else if (distanceX < 0)
-//         {
-//             dx = -1;
-//         }
+void MoveStork(OBJ* stork, OBJ* frog, int frame)
+{
+    if (frame % stork->moveFactor == 0)
+    {
+        int distanceX = frog->x - stork->x;
+        int distanceY = frog->y - stork->y;
+        int dx = 0, dy = 0;
+        if (distanceX > 0)
+        {
+            dx = 1;
+        }
+        else if (distanceX < 0)
+        {
+            dx = -1;
+        }
 
-//         if (distanceY > 0)
-//         {
-//             dy = 1;
-//         }
-//         else if (distanceY < 0)
-//         {
-//             dy = -1;
-//         }
-
-//         MoveObj(stork, dx, dy);
-//     }
-//     PrintObj(stork);
-// }
+        if (distanceY > 0)
+        {
+            dy = 1;
+        }
+        else if (distanceY < 0)
+        {
+            dy = -1;
+        }
+        MoveObj(stork, dx, dy);
+    }
+    PrintObj(stork);
+}
 
 
 // --- MAIN LOOP ---
-GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars, OBJ* dest, OBJ** obstacles, /*OBJ* stork,*/ CFG* cfg)
+GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars, OBJ* dest, OBJ** obstacles, OBJ* stork, CFG* cfg)
 {
     PrintObj(dest);
     int key;
@@ -733,7 +712,7 @@ GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars,
         UpdateCars(playable, timer, frog, cars, obstacles, cfg);
         PrintLanes(playable, cfg);
         PrintObj(frog);  // force overlapping car lanes
-        // MoveStork(stork, frog, timer->frame);
+        MoveStork(stork, frog, timer->frame);
         PrintJumps(status, frog);
         if (Collision(frog, dest))
         {
@@ -746,6 +725,10 @@ GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars,
                 return FAILURE;
             }
         }
+        if (Collision(frog, stork))
+        {
+            return FAILURE;
+        }
         if (UpdateTimer(timer, status, cfg->initialTime))
         {
             return TIME_OVER;
@@ -756,7 +739,7 @@ GameResult Play(WIN* playable, WIN* status, TIMER* timer, OBJ* frog, CAR** cars,
 
 
 // --- CLEANUP ---
-void Cleanup(WIN* playable, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** cars, OBJ* dest, OBJ** obstacles, TIMER* timer, CFG* cfg)
+void Cleanup(WIN* playable, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** cars, OBJ* dest, OBJ** obstacles, OBJ* stork, TIMER* timer, CFG* cfg)
 {
     FreeShape(frog->shape, frog->height);
     free(frog);
@@ -778,6 +761,8 @@ void Cleanup(WIN* playable, WIN* status, WINDOW* mainWindow, OBJ* frog, CAR** ca
         free(obstacles[i]);
     }
     free(obstacles);
+    FreeShape(stork->shape, stork->height);
+    free(stork);
     free(timer);
     FreeShape(cfg->frogShape, cfg->frogHeight);
     FreeShape(cfg->carShape, cfg->carHeight);
@@ -808,12 +793,12 @@ int main()
     CAR** cars = GenerateCars(playable, cfg, COLOR_ENEMY_CAR, COLOR_NEUTRAL_CAR, COLOR_FRIENDLY_CAR);
     OBJ* dest = InitDest(playable, COLOR_DEST);
     OBJ** obstacles = GenerateObstacles(playable, cfg, COLOR_OBSTACLE);
-    // OBJ* stork = InitStork(playable, COLOR_STORK);
+    OBJ* stork = InitStork(playable, COLOR_STORK);
 
     InitStatus(status, timer, frog);
 
-    GameResult result = Play(playable, status, timer, frog, cars, dest, obstacles, /*stork,*/ cfg);
+    GameResult result = Play(playable, status, timer, frog, cars, dest, obstacles, stork, cfg);
     EndGame(playable, status, result, cfg, frog->nMoves, timer->timeLeft);
-    Cleanup(playable, status, mainWindow, frog, cars, dest, obstacles, timer, cfg);
+    Cleanup(playable, status, mainWindow, frog, cars, dest, obstacles, stork, timer, cfg);
     return EXIT_SUCCESS;
 }

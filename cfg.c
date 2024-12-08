@@ -70,7 +70,8 @@ void LoadFrogDefaults(CFG* cfg)
     cfg->frogWidth = FROG_WIDTH;
     cfg->frogHeight = FROG_HEIGHT;
     cfg->frogShape = (char**)malloc(cfg->frogHeight * sizeof(char*));
-    for (int i = 0; i < cfg->frogHeight; i++) {
+    for (int i = 0; i < cfg->frogHeight; i++)
+    {
         cfg->frogShape[i] = (char*)malloc((cfg->frogWidth + 1) * sizeof(char));
     }
     strcpy(cfg->frogShape[0], " @..@ ");
@@ -89,7 +90,8 @@ void LoadCarsDefaults(CFG* cfg)
     cfg->carWidth = CAR_WIDTH;
     cfg->carHeight = CAR_HEIGHT;
     cfg->carShape = (char**)malloc(cfg->carHeight * sizeof(char*));
-    for (int i = 0; i < cfg->carHeight; i++) {
+    for (int i = 0; i < cfg->carHeight; i++)
+    {
         cfg->carShape[i] = (char*)malloc((cfg->carWidth + 1) * sizeof(char));
     }
     strcpy(cfg->carShape[0], "  ____  ");
@@ -119,7 +121,8 @@ void LoadCfgDefaults(CFG* cfg)
 
 // --- SHAPE UTILITIES ---
 void FreeShape(char** shape, int height) {
-    for (int i = 0; i < height; i++) {
+    for (int i = 0; i < height; i++)
+    {
         free(shape[i]);
     }
     free(shape);
@@ -127,18 +130,23 @@ void FreeShape(char** shape, int height) {
 
 void ReadShapeFromFile(FILE* file, char*** shape, int width, int height) {
     *shape = (char**)malloc(height * sizeof(char*)); // allocate with new height and width
-    for (int i = 0; i < height; i++) {
+    for (int i = 0; i < height; i++)
+    {
         (*shape)[i] = (char*)malloc((width + 1) * sizeof(char));
     }
 
     int ch;
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            do {
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            do
+            {
                 ch = fgetc(file);
             } while (ch == '\n');   // skip newline characters
 
-            if (ch == EOF) {
+            if (ch == EOF)
+            {
                 return;
             }
 
@@ -205,26 +213,33 @@ void LoadControlsFromFile(CFG* cfg, FILE* file)
 // Load config from file and override default values
 void LoadCfgFromFile(CFG* cfg) {
     FILE* file = fopen(CONFIG_FILE, "r");
-    if (!file) {
+    if (!file)
+    {
         return; // file not found
     }
 
-    while (!feof(file)) {   // read config file and ovrride defaults
+    while (!feof(file))
+    {
         char section[20];
         fscanf(file, "%s\n", section);
-        if (strcmp(section, "---TIMING---") == 0) {
+        if (strcmp(section, "---TIMING---") == 0)
+        {
             LoadTimingFromFile(cfg, file);
         }
-        else if (strcmp(section, "---AREA---") == 0) {
+        else if (strcmp(section, "---AREA---") == 0)
+        {
             LoadAreaFromFile(cfg, file);
         }
-        else if (strcmp(section, "---FROG---") == 0) {
+        else if (strcmp(section, "---FROG---") == 0)
+        {
             LoadFrogFromFile(cfg, file);
         }
-        else if (strcmp(section, "---CARS---") == 0) {
+        else if (strcmp(section, "---CARS---") == 0)
+        {
             LoadCarsFromFile(cfg, file);
         }
-        else if (strcmp(section, "---CONTROLS---") == 0) {
+        else if (strcmp(section, "---CONTROLS---") == 0)
+        {
             LoadControlsFromFile(cfg, file);
         }
     }
