@@ -2,72 +2,55 @@
 #ifndef CFG_H
 #define CFG_H
 
-// --- CFG STRUCTURES ---
-// Timing
+// Config structure - encapsulates all settings
 typedef struct {
+    // Timing
     int frameTime;
     float initialTime;
     int carSpawnFactor;
     int carSpeedChangeFactor;
     int quitTime;
-} TIMING_CFG;
 
-// Area
-typedef struct {
+    // Area
     int playableRows;
     int statusRows;
     int cols;
     int offy;
     int offx;
-} AREA_CFG;
 
-// Frog
-typedef struct {
-    int moveFactor;
-    int width;
-    int height;
-    char** shape;
-} FROG_CFG;
+    // Frog
+    int frogMoveFactor;
+    int frogWidth;
+    int frogHeight;
+    char** frogShape;
 
-// Cars
-typedef struct {
+    // Cars
     int nCars;
     int nNeutralCars;
     int nFriendlyCars;
     int neutralCarStopThreshold;
-    int minMoveFactor;
-    int maxMoveFactor;
-    int width;
-    int height;
-    char** shape;
-} CARS_CFG;
+    int carMinMoveFactor;
+    int carMaxMoveFactor;
+    int carWidth;
+    int carHeight;
+    char** carShape;
 
-// Controls
-typedef struct {
+    // Controls
     char up;
     char down;
     char left;
     char right;
     char request;
     char quit;
-} CONTROLS_CFG;
-
-// Config structure - encapsulates all settings
-typedef struct {
-    TIMING_CFG* timing;
-    AREA_CFG* area;
-    FROG_CFG* frog;
-    CARS_CFG* cars;
-    CONTROLS_CFG* controls;
 } CFG;
 
 // --- CFG FUNCTIONS ---
 // Load default values for each section
-void LoadTimingDefaults(TIMING_CFG* timing);
-void LoadAreaDefaults(AREA_CFG* area);
-void LoadFrogDefaults(FROG_CFG* frog);
-void LoadCarsDefaults(CARS_CFG* cars);
-void LoadControlsDefaults(CONTROLS_CFG* controls);
+void LoadTimingDefaults(CFG* cfg);
+void LoadAreaDefaults(CFG* cfg);
+void LoadFrogDefaults(CFG* cfg);
+void LoadCarsDefaults(CFG* cfg);
+void LoadControlsDefaults(CFG* cfg);
 void LoadCfgDefaults(CFG* cfg);
 
 // Utilities for handling shapes
@@ -75,11 +58,11 @@ void FreeShape(char** shape, int height);
 void ReadShapeFromFile(FILE* file, char*** shape, int width, int height);
 
 // Load configuration from file for each section
-void LoadTimingFromFile(TIMING_CFG* timing, FILE* file);
-void LoadAreaFromFile(AREA_CFG* area, FILE* file);
-void LoadFrogFromFile(FROG_CFG* frog, FILE* file);
-void LoadCarsFromFile(CARS_CFG* cars, FILE* file);
-void LoadControlsFromFile(CONTROLS_CFG* controls, FILE* file);
+void LoadTimingFromFile(CFG* cfg, FILE* file);
+void LoadAreaFromFile(CFG* cfg, FILE* file);
+void LoadFrogFromFile(CFG* cfg, FILE* file);
+void LoadCarsFromFile(CFG* cfg, FILE* file);
+void LoadControlsFromFile(CFG* cfg, FILE* file);
 void LoadCfgFromFile(CFG* cfg, const char* filename);
 CFG* InitCfg();
 

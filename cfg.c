@@ -44,84 +44,75 @@ const int QUIT = 'q';
 
 
 // --- LOADING DEFAULT CONFIGURATION ---
-void LoadTimingDefaults(TIMING_CFG* timing)
+void LoadTimingDefaults(CFG* cfg)
 {
-    timing->frameTime = FRAME_TIME;
-    timing->initialTime = INITIAL_TIME;
-    timing->carSpawnFactor = CAR_SPAWN_FACTOR;
-    timing->carSpeedChangeFactor = CAR_SPEED_CHANGE_FACTOR;
-    timing->quitTime = QUIT_TIME;
+    cfg->frameTime = FRAME_TIME;
+    cfg->initialTime = INITIAL_TIME;
+    cfg->carSpawnFactor = CAR_SPAWN_FACTOR;
+    cfg->carSpeedChangeFactor = CAR_SPEED_CHANGE_FACTOR;
+    cfg->quitTime = QUIT_TIME;
 }
 
-void LoadAreaDefaults(AREA_CFG* area)
+void LoadAreaDefaults(CFG* cfg)
 {
-    area->playableRows = PLAYABLE_ROWS;
-    area->statusRows = STATUS_ROWS;
-    area->cols = PLAYABLE_COLS;
-    area->offy = OFFY;
-    area->offx = OFFX;
+    cfg->playableRows = PLAYABLE_ROWS;
+    cfg->statusRows = STATUS_ROWS;
+    cfg->cols = PLAYABLE_COLS;
+    cfg->offy = OFFY;
+    cfg->offx = OFFX;
 }
 
-void LoadFrogDefaults(FROG_CFG* frog)
+void LoadFrogDefaults(CFG* cfg)
 {
-    frog->moveFactor = FROG_MOVE_FACTOR;
-    frog->width = FROG_WIDTH;
-    frog->height = FROG_HEIGHT;
-    frog->shape = malloc(frog->height * sizeof(char*));
-    for (int i = 0; i < frog->height; i++) {
-        frog->shape[i] = malloc((frog->width + 1) * sizeof(char));
+    cfg->frogMoveFactor = FROG_MOVE_FACTOR;
+    cfg->frogWidth = FROG_WIDTH;
+    cfg->frogHeight = FROG_HEIGHT;
+    cfg->frogShape = malloc(cfg->frogHeight * sizeof(char*));
+    for (int i = 0; i < cfg->frogHeight; i++) {
+        cfg->frogShape[i] = malloc((cfg->frogWidth + 1) * sizeof(char));
     }
-    strcpy(frog->shape[0], " @..@ ");
-    strcpy(frog->shape[1], "(----)");
-    strcpy(frog->shape[2], " ^  ^ ");
+    strcpy(cfg->frogShape[0], " @..@ ");
+    strcpy(cfg->frogShape[1], "(----)");
+    strcpy(cfg->frogShape[2], " ^  ^ ");
 }
 
-void LoadCarsDefaults(CARS_CFG* cars)
+void LoadCarsDefaults(CFG* cfg)
 {
-    cars->nCars = N_CARS;
-    cars->nNeutralCars = N_NEUTRAL_CARS;
-    cars->neutralCarStopThreshold = NEUTRAL_CAR_STOP_THRESHOLD;
-    cars->nFriendlyCars = N_FRIENDLY_CARS;
-    cars->minMoveFactor = CAR_MIN_MOVE_FACTOR;
-    cars->maxMoveFactor = CAR_MAX_MOVE_FACTOR;
-    cars->width = CAR_WIDTH;
-    cars->height = CAR_HEIGHT;
-    cars->shape = malloc(cars->height * sizeof(char*));
-    for (int i = 0; i < cars->height; i++) {
-        cars->shape[i] = malloc((cars->width + 1) * sizeof(char));
+    cfg->nCars = N_CARS;
+    cfg->nNeutralCars = N_NEUTRAL_CARS;
+    cfg->neutralCarStopThreshold = NEUTRAL_CAR_STOP_THRESHOLD;
+    cfg->nFriendlyCars = N_FRIENDLY_CARS;
+    cfg->carMinMoveFactor = CAR_MIN_MOVE_FACTOR;
+    cfg->carMaxMoveFactor = CAR_MAX_MOVE_FACTOR;
+    cfg->carWidth = CAR_WIDTH;
+    cfg->carHeight = CAR_HEIGHT;
+    cfg->carShape = malloc(cfg->carHeight * sizeof(char*));
+    for (int i = 0; i < cfg->carHeight; i++) {
+        cfg->carShape[i] = malloc((cfg->carWidth + 1) * sizeof(char));
     }
-    strcpy(cars->shape[0], "  ____  ");
-    strcpy(cars->shape[1], "_/____\\_");
-    strcpy(cars->shape[2], " O    O ");
+    strcpy(cfg->carShape[0], "  ____  ");
+    strcpy(cfg->carShape[1], "_/____\\_");
+    strcpy(cfg->carShape[2], " O    O ");
 }
 
-void LoadControlsDefaults(CONTROLS_CFG* controls)
+void LoadControlsDefaults(CFG* cfg)
 {
-    controls->up = UP;
-    controls->down = DOWN;
-    controls->left = LEFT;
-    controls->right = RIGHT;
-    controls->request = REQUEST;
-    controls->quit = QUIT;
+    cfg->up = UP;
+    cfg->down = DOWN;
+    cfg->left = LEFT;
+    cfg->right = RIGHT;
+    cfg->request = REQUEST;
+    cfg->quit = QUIT;
 }
 
 // Load default configuration
 void LoadCfgDefaults(CFG* cfg)
 {
-    cfg->timing = (TIMING_CFG*)malloc(sizeof(TIMING_CFG));
-    LoadTimingDefaults(cfg->timing);
-
-    cfg->area = (AREA_CFG*)malloc(sizeof(AREA_CFG));
-    LoadAreaDefaults(cfg->area);
-
-    cfg->frog = (FROG_CFG*)malloc(sizeof(FROG_CFG));
-    LoadFrogDefaults(cfg->frog);
-
-    cfg->cars = (CARS_CFG*)malloc(sizeof(CARS_CFG));
-    LoadCarsDefaults(cfg->cars);
-
-    cfg->controls = (CONTROLS_CFG*)malloc(sizeof(CONTROLS_CFG));
-    LoadControlsDefaults(cfg->controls);
+    LoadTimingDefaults(cfg);
+    LoadAreaDefaults(cfg);
+    LoadFrogDefaults(cfg);
+    LoadCarsDefaults(cfg);
+    LoadControlsDefaults(cfg);
 }
 
 
@@ -157,57 +148,57 @@ void ReadShapeFromFile(FILE* file, char*** shape, int width, int height) {
 
 
 // --- LOADING CONFIGURATION FROM FILE ---
-void LoadTimingFromFile(TIMING_CFG* timing, FILE* file)
+void LoadTimingFromFile(CFG* cfg, FILE* file)
 {
-    fscanf(file, "FRAME_TIME=%d\n", &timing->frameTime);
-    fscanf(file, "INITIAL_TIME=%f\n", &timing->initialTime);
-    fscanf(file, "CAR_SPAWN_FACTOR=%d\n", &timing->carSpawnFactor);
-    fscanf(file, "CAR_SPEED_CHANGE_FACTOR=%d\n", &timing->carSpeedChangeFactor);
-    fscanf(file, "QUIT_TIME=%d\n", &timing->quitTime);
+    fscanf(file, "FRAME_TIME=%d\n", &cfg->frameTime);
+    fscanf(file, "INITIAL_TIME=%f\n", &cfg->initialTime);
+    fscanf(file, "CAR_SPAWN_FACTOR=%d\n", &cfg->carSpawnFactor);
+    fscanf(file, "CAR_SPEED_CHANGE_FACTOR=%d\n", &cfg->carSpeedChangeFactor);
+    fscanf(file, "QUIT_TIME=%d\n", &cfg->quitTime);
 }
 
-void LoadAreaFromFile(AREA_CFG* area, FILE* file)
+void LoadAreaFromFile(CFG* cfg, FILE* file)
 {
-    fscanf(file, "PLAYABLE_ROWS=%d\n", &area->playableRows);
-    fscanf(file, "STATUS_ROWS=%d\n", &area->statusRows);
-    fscanf(file, "COLS=%d\n", &area->cols);
-    fscanf(file, "OFFY=%d\n", &area->offy);
-    fscanf(file, "OFFX=%d\n", &area->offx);
+    fscanf(file, "PLAYABLE_ROWS=%d\n", &cfg->playableRows);
+    fscanf(file, "STATUS_ROWS=%d\n", &cfg->statusRows);
+    fscanf(file, "COLS=%d\n", &cfg->cols);
+    fscanf(file, "OFFY=%d\n", &cfg->offy);
+    fscanf(file, "OFFX=%d\n", &cfg->offx);
 }
 
-void LoadFrogFromFile(FROG_CFG* frog, FILE* file)
+void LoadFrogFromFile(CFG* cfg, FILE* file)
 {
-    FreeShape(frog->shape, frog->height);   // free default shape
-    fscanf(file, "FROG_MOVE_FACTOR=%d\n", &frog->moveFactor);
-    fscanf(file, "FROG_WIDTH=%d\n", &frog->width);
-    fscanf(file, "FROG_HEIGHT=%d\n", &frog->height);
+    FreeShape(cfg->frogShape, cfg->frogHeight);   // free default shape
+    fscanf(file, "FROG_MOVE_FACTOR=%d\n", &cfg->frogMoveFactor);
+    fscanf(file, "FROG_WIDTH=%d\n", &cfg->frogWidth);
+    fscanf(file, "FROG_HEIGHT=%d\n", &cfg->frogHeight);
     fscanf(file, "FROG_SHAPE:");
-    ReadShapeFromFile(file, &frog->shape, frog->width, frog->height);
+    ReadShapeFromFile(file, &cfg->frogShape, cfg->frogWidth, cfg->frogHeight);
 }
 
-void LoadCarsFromFile(CARS_CFG* cars, FILE* file)
+void LoadCarsFromFile(CFG* cfg, FILE* file)
 {
-    FreeShape(cars->shape, cars->height);
-    fscanf(file, "N_CARS=%d\n", &cars->nCars);
-    fscanf(file, "N_NEUTRAL_CARS=%d\n", &cars->nNeutralCars);
-    fscanf(file, "N_FRIENDLY_CARS=%d\n", &cars->nFriendlyCars);
-    fscanf(file, "NEUTRAL_CAR_STOP_THRESHOLD=%d\n", &cars->neutralCarStopThreshold);
-    fscanf(file, "CAR_MIN_MOVE_FACTOR=%d\n", &cars->minMoveFactor);
-    fscanf(file, "CAR_MAX_MOVE_FACTOR=%d\n", &cars->maxMoveFactor);
-    fscanf(file, "CAR_WIDTH=%d\n", &cars->width);
-    fscanf(file, "CAR_HEIGHT=%d\n", &cars->height);
+    FreeShape(cfg->carShape, cfg->carHeight);
+    fscanf(file, "N_CARS=%d\n", &cfg->nCars);
+    fscanf(file, "N_NEUTRAL_CARS=%d\n", &cfg->nNeutralCars);
+    fscanf(file, "N_FRIENDLY_CARS=%d\n", &cfg->nFriendlyCars);
+    fscanf(file, "NEUTRAL_CAR_STOP_THRESHOLD=%d\n", &cfg->neutralCarStopThreshold);
+    fscanf(file, "CAR_MIN_MOVE_FACTOR=%d\n", &cfg->carMinMoveFactor);
+    fscanf(file, "CAR_MAX_MOVE_FACTOR=%d\n", &cfg->carMaxMoveFactor);
+    fscanf(file, "CAR_WIDTH=%d\n", &cfg->carWidth);
+    fscanf(file, "CAR_HEIGHT=%d\n", &cfg->carHeight);
     fscanf(file, "CAR_SHAPE:");
-    ReadShapeFromFile(file, &cars->shape, cars->width, cars->height);
+    ReadShapeFromFile(file, &cfg->carShape, cfg->carWidth, cfg->carHeight);
 }
 
-void LoadControlsFromFile(CONTROLS_CFG* controls, FILE* file)
+void LoadControlsFromFile(CFG* cfg, FILE* file)
 {
-    fscanf(file, "UP=%c\n", &controls->up);
-    fscanf(file, "DOWN=%c\n", &controls->down);
-    fscanf(file, "LEFT=%c\n", &controls->left);
-    fscanf(file, "RIGHT=%c\n", &controls->right);
-    fscanf(file, "REQUEST=%c\n", &controls->request);
-    fscanf(file, "QUIT=%c\n", &controls->quit);
+    fscanf(file, "UP=%c\n", &cfg->up);
+    fscanf(file, "DOWN=%c\n", &cfg->down);
+    fscanf(file, "LEFT=%c\n", &cfg->left);
+    fscanf(file, "RIGHT=%c\n", &cfg->right);
+    fscanf(file, "REQUEST=%c\n", &cfg->request);
+    fscanf(file, "QUIT=%c\n", &cfg->quit);
 }
 
 // Load config from file and override default values
@@ -221,19 +212,19 @@ void LoadCfgFromFile(CFG* cfg, const char* filename) {
         char section[20];
         fscanf(file, "%s\n", section);
         if (strcmp(section, "---TIMING---") == 0) {
-            LoadTimingFromFile(cfg->timing, file);
+            LoadTimingFromFile(cfg, file);
         }
         else if (strcmp(section, "---AREA---") == 0) {
-            LoadAreaFromFile(cfg->area, file);
+            LoadAreaFromFile(cfg, file);
         }
         else if (strcmp(section, "---FROG---") == 0) {
-            LoadFrogFromFile(cfg->frog, file);
+            LoadFrogFromFile(cfg, file);
         }
         else if (strcmp(section, "---CARS---") == 0) {
-            LoadCarsFromFile(cfg->cars, file);
+            LoadCarsFromFile(cfg, file);
         }
         else if (strcmp(section, "---CONTROLS---") == 0) {
-            LoadControlsFromFile(cfg->controls, file);
+            LoadControlsFromFile(cfg, file);
         }
     }
 
